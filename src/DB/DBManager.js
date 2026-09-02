@@ -7077,7 +7077,12 @@ function loadLuaValue(file_path, variable_name, callback, onEnd) {
 				lua.doStringSync(
 					String.raw`
 							local function escape_str(str)
-								return str:gsub("\\", "\\\\"):gsub("\"", "\\\"")
+								return str:gsub("\\", "\\\\")
+									:gsub("\"", "\\\"")
+									:gsub("\n", "\\n")
+									:gsub("\r", "\\r")
+									:gsub("\t", "\\t")
+									:gsub("[%c]", function(c) return string.format("\\u%04x", c:byte()) end)
 							end
 
 							local function to_json(value)
