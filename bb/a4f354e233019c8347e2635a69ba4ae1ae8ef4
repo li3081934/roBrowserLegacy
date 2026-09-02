@@ -1,0 +1,19 @@
+src/DB/DBManager.js
+  s_dbbfcf65e36f22::t_34cc0ef26d7752 7080-7085
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "bba4f354e233019c8347e2635a69ba4ae1ae8ef4",
+  "prompts": {},
+  "sessions": {
+    "s_dbbfcf65e36f22": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fa5165236ffeEBWHNE9KFMyZUg",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
