@@ -1,0 +1,23 @@
+src/UI/Components/AutoHunt/AutoHunt.html
+  s_9766838414354b::t_960d3b5a6ebd40 78
+src/Engine/SessionStorage.js
+  s_9766838414354b::t_5415f330bb7119 124
+src/UI/Components/AutoHunt/AutoHunt.js
+  s_9766838414354b::t_20bd72926144e9 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "773e6065070470b21e4ef8e8a9b206708669dffd",
+  "prompts": {},
+  "sessions": {
+    "s_9766838414354b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9e7b0e4effepQsw2Tv1vzA7z1",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
