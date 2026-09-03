@@ -1,0 +1,39 @@
+src/UI/Components/AutoHunt/AutoHunt.css
+  s_9766838414354b::t_e5f2b7017eba71 1-170
+src/Engine/MapEngine.js
+  s_9766838414354b::t_a562cf944e1a2c 92
+  s_9766838414354b::t_d06a97b0c97ec9 362
+src/UI/Components/AutoHunt/AutoHunt.js
+  s_9766838414354b::t_17e369cae79a4c 1-161
+src/UI/Components/AutoHunt/AutoHunt.html
+  s_9766838414354b::t_0a88c4fdaf54f5 1-98
+src/Engine/MapEngine/AutoHunt.js
+  s_9766838414354b::t_fb4e6ad4e905fa 20
+  s_9766838414354b::t_1f73126d49bbed 1-19,21-652
+src/Engine/SessionStorage.js
+  s_9766838414354b::t_28d6f5e4f79312 113-127
+src/Controls/MapControl.js
+  s_9766838414354b::t_0fec343dd53abf 31
+  s_9766838414354b::t_0a6894deb8caca 135-139
+src/Controls/ProcessCommand.js
+  s_9766838414354b::t_e372d660ec6ba4 47
+  s_9766838414354b::t_2aabccbea6ed35 827,833
+  s_9766838414354b::t_e49a948c047109 48
+  s_9766838414354b::t_9a262b69c79448 819-826,828-832,834-842
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.0",
+  "base_commit_sha": "db4e0b9673211fdb26089d83466183547b85e5d8",
+  "prompts": {},
+  "sessions": {
+    "s_9766838414354b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9e7b0e4effepQsw2Tv1vzA7z1",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
