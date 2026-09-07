@@ -17,6 +17,7 @@ import glMatrix from 'Vendors/gl-matrix.js';
 import Camera from 'Renderer/Camera.js';
 import PathFinding from 'Utils/PathFinding.js';
 import Target from './JoystickTargetService.js';
+import Navigation from 'UI/Components/Navigation/Navigation.js';
 
 const direction = glMatrix.vec2.create();
 const rotate = glMatrix.mat2.create();
@@ -25,6 +26,12 @@ function move(x, y) {
 	const player = Session.Entity;
 	if (!player) {
 		return;
+	}
+
+	// Manual joystick walk cancels Navigation: stops auto-walk,
+	// clears route/marker display
+	if (Navigation && Navigation.clear) {
+		Navigation.clear();
 	}
 
 	direction[0] = x;
@@ -54,6 +61,12 @@ function attack() {
 	const target = Target.getEntity();
 	if (!target) {
 		return;
+	}
+
+	// Manual attack walk-to cancels Navigation: stops auto-walk,
+	// clears route/marker display
+	if (Navigation && Navigation.clear) {
+		Navigation.clear();
 	}
 
 	Target.focus(target);

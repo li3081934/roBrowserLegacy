@@ -18,6 +18,9 @@ import Altitude from 'Renderer/Map/Altitude.js';
 import Session from 'Engine/SessionStorage.js';
 import Client from 'Core/Client.js';
 import DB from 'DB/DBManager.js';
+import Network from 'Network/NetworkManager.js';
+import PACKETVER from 'Network/PacketVerManager.js';
+import PACKET from 'Network/PacketStructure.js';
 import htmlText from './Navigation.html?raw';
 import cssText from './Navigation.css?raw';
 import MapPathFinder from './MapPathFinder.js';
@@ -138,6 +141,18 @@ let _originalColor = '';
  * Document click handler reference for cleanup
  */
 let _documentClickHandler = null;
+
+/**
+ * Same-map auto-walk state (segmented, server single-packet limit ~14-15 cells)
+ */
+let _autoWalkActive = false;
+let _autoWalkGen = 0;
+let _autoWalkStep = null;
+let _autoWalkLastSend = 0;
+const _autoWalkStepSize = 12;
+const _autoWalkArriveDist = 2;
+const _autoWalkResendDist = 3;
+const _autoWalkSendInterval = 500;
 
 /**
  * Local utility functions
@@ -268,6 +283,7 @@ function initializePathFindingWorker() {
 							this.updateTargetText();
 							this.setTargetCoordinatesBlinking(false);
 							this.setLocationTitle(mapName, _finalTargetData.map, _finalTargetData.displayName);
+							followAutoWalk();
 						} else {
 							this.updateTargetText(true);
 							this.setTargetCoordinatesBlinking(false);
@@ -283,6 +299,174 @@ function initializePathFindingWorker() {
 function resetPathFindingWorker() {
 	terminatePathFindingWorker();
 	initializePathFindingWorker();
+}
+
+/**
+ * Chebyshev distance between two cells
+ */
+function chebyshevDist(x0, y0, x1, y1) {
+	return Math.max(Math.abs(x0 - x1), Math.abs(y0 - y1));
+}
+
+/**
+ * Send a move packet to walk to the given same-map cell.
+ * Cross-map auto-walk is intentionally not handled here.
+ *
+ * @param {number} x - Destination X coordinate
+ * @param {number} y - Destination Y coordinate
+ * @returns {boolean} True if a packet was sent
+ */
+function requestMoveTo(x, y) {
+	if (!Session.Entity || !Session.Entity.position) {
+		return false;
+	}
+
+	const destX = Math.floor(x);
+	const destY = Math.floor(y);
+	const curX = Math.round(Session.Entity.position[0]);
+	const curY = Math.round(Session.Entity.position[1]);
+
+	// Already there, no need to move
+	if (curX === destX && curY === destY) {
+		return false;
+	}
+
+	let pkt;
+	if (PACKETVER.value >= 20180307) {
+		pkt = new PACKET.CZ.REQUEST_MOVE2();
+	} else {
+		pkt = new PACKET.CZ.REQUEST_MOVE();
+	}
+	pkt.dest = [destX, destY];
+	Network.sendPacket(pkt);
+	_autoWalkStep = { x: destX, y: destY };
+	_autoWalkLastSend = Renderer.tick;
+	return true;
+}
+
+/**
+ * Start segmented same-map auto-walk toward the current final target
+ */
+function startAutoWalk() {
+	_autoWalkActive = true;
+	_autoWalkGen++;
+	_autoWalkStep = null;
+	_autoWalkLastSend = 0;
+}
+
+/**
+ * Pick the next waypoint along the worker path within single-packet range.
+ * Falls back to a clamped straight step toward the final target when
+ * the worker path is not available yet.
+ *
+ * @returns {{x:number,y:number}|null} Next segment destination
+ */
+function pickNextAutoWalkStep() {
+	if (!Session.Entity || !Session.Entity.position || !_finalTargetData) {
+		return null;
+	}
+
+	const curX = Math.round(Session.Entity.position[0]);
+	const curY = Math.round(Session.Entity.position[1]);
+
+	if (_path && _path.length > 1) {
+		// Rebase to the path point nearest to the player (handles drift/recalc)
+		let baseIndex = 0;
+		let best = Infinity;
+		for (let i = 0; i < _path.length; i++) {
+			const d = chebyshevDist(curX, curY, _path[i].x, _path[i].y);
+			if (d < best) {
+				best = d;
+				baseIndex = i;
+			}
+		}
+
+		// Furthest waypoint ahead still within single-packet range
+		let next = null;
+		for (let i = baseIndex + 1; i < _path.length; i++) {
+			if (chebyshevDist(curX, curY, _path[i].x, _path[i].y) > _autoWalkStepSize) {
+				break;
+			}
+			next = _path[i];
+		}
+		if (next) {
+			return { x: next.x, y: next.y };
+		}
+		// Next path point is already beyond range (should not happen often);
+		// clamp it so the packet stays within the server limit.
+		const ahead = _path[Math.min(baseIndex + 1, _path.length - 1)];
+		if (ahead) {
+			const dx = ahead.x - curX;
+			const dy = ahead.y - curY;
+			const m = Math.max(Math.abs(dx), Math.abs(dy));
+			if (m > 0) {
+				const k = _autoWalkStepSize / m;
+				return { x: Math.round(curX + dx * k), y: Math.round(curY + dy * k) };
+			}
+		}
+		return null;
+	}
+
+	// No worker path yet: clamped straight step toward the final target
+	const dx = _finalTargetData.x - curX;
+	const dy = _finalTargetData.y - curY;
+	const m = Math.max(Math.abs(dx), Math.abs(dy));
+	if (m <= 0) {
+		return null;
+	}
+	if (m <= _autoWalkStepSize) {
+		return { x: _finalTargetData.x, y: _finalTargetData.y };
+	}
+	const k = _autoWalkStepSize / m;
+	return { x: Math.round(curX + dx * k), y: Math.round(curY + dy * k) };
+}
+
+/**
+ * Advance segmented auto-walk. Called on a throttle from the render loop
+ * and right after the worker returns a fresh path.
+ */
+function followAutoWalk() {
+	if (!_autoWalkActive || !_finalTargetData) {
+		return;
+	}
+	if (!Session.Entity || !Session.Entity.position) {
+		return;
+	}
+	// Same-map only: stop when the map changed or target is elsewhere
+	if (getCurrentMap() !== _finalTargetData.map) {
+		Navigation.cancelAutoWalk();
+		return;
+	}
+
+	const curX = Math.round(Session.Entity.position[0]);
+	const curY = Math.round(Session.Entity.position[1]);
+
+	// Arrived: stop sending, keep the displayed route/marker
+	if (chebyshevDist(curX, curY, _finalTargetData.x, _finalTargetData.y) <= _autoWalkArriveDist) {
+		Navigation.cancelAutoWalk();
+		return;
+	}
+
+	const playerWalking =
+		Session.Entity.action === Session.Entity.ACTION.WALK ||
+		(Session.Entity.walk && Session.Entity.walk.total !== 0);
+
+	// While walking toward the current step, only resend when close to it
+	if (_autoWalkStep && playerWalking) {
+		if (chebyshevDist(curX, curY, _autoWalkStep.x, _autoWalkStep.y) > _autoWalkResendDist) {
+			return;
+		}
+	}
+
+	if (Renderer.tick - _autoWalkLastSend < _autoWalkSendInterval) {
+		return;
+	}
+
+	const next = pickNextAutoWalkStep();
+	if (!next) {
+		return;
+	}
+	requestMoveTo(next.x, next.y);
 }
 
 /**
@@ -412,6 +596,7 @@ Navigation.init = function init() {
  */
 Navigation.onAppend = function onAppend() {
 	// Clear path for clean render
+	this.cancelAutoWalk();
 	this.clearPath();
 
 	// Start rendering
@@ -442,6 +627,7 @@ Navigation.onAppend = function onAppend() {
  * Once removed from DOM
  */
 Navigation.onRemove = function onRemove() {
+	this.cancelAutoWalk();
 	this.clearPath();
 	terminatePathFindingWorker();
 
@@ -701,6 +887,12 @@ Navigation.loadMap = function loadMap(mapName, displayName) {
  * Clear the end marker
  */
 Navigation.clear = function clear() {
+	// No-op when nothing is set (manual-move hooks call this frequently)
+	if (!_finalTargetData && !_targetData && !_autoWalkActive && _path.length === 0) {
+		return;
+	}
+
+	this.cancelAutoWalk();
 	this.clearPath();
 	_finalTargetData = null;
 	_targetData = null;
@@ -708,9 +900,11 @@ Navigation.clear = function clear() {
 
 	// Hide the target coordinates display
 	const root = Navigation.getRoot();
-	const targetInfo = root.querySelector('.target-info');
-	if (targetInfo) {
-		targetInfo.style.display = 'none';
+	if (root) {
+		const targetInfo = root.querySelector('.target-info');
+		if (targetInfo) {
+			targetInfo.style.display = 'none';
+		}
 	}
 
 	// Update location title with current map name
@@ -724,6 +918,16 @@ Navigation.clearPath = function clearPath() {
 	_path = [];
 	_lastPathUpdate = 0;
 	_pathUpdateLock = false;
+};
+
+/**
+ * Cancel segmented auto-walk (keeps the displayed route/marker).
+ * Called on arrival, manual ground click, map change, hide/remove.
+ */
+Navigation.cancelAutoWalk = function cancelAutoWalk() {
+	_autoWalkActive = false;
+	_autoWalkGen++;
+	_autoWalkStep = null;
 };
 
 /**
@@ -770,6 +974,7 @@ Navigation.renderCanvas = function renderCanvas(tick) {
 		});
 		_lastPathUpdate = tick;
 	}
+	followAutoWalk();
 
 	// Clear canvas
 	ctx.clearRect(0, 0, width, height);
@@ -1177,6 +1382,7 @@ Navigation.show = function show() {
  * Hide the navigation window
  */
 Navigation.hide = function hide() {
+	this.cancelAutoWalk();
 	this.ui.hide();
 	terminatePathFindingWorker();
 };
@@ -1277,10 +1483,13 @@ Navigation.navigateTo = function navigateTo(options) {
 	const endMap = normalizeMapName(options.endMap);
 	const displayName = options.displayName;
 
-	if (
-		_finalTargetData &&
-		(_finalTargetData.map !== endMap || _finalTargetData.x !== options.endX || _finalTargetData.y !== options.endY)
-	) {
+	const isNewTarget =
+		!_finalTargetData ||
+		_finalTargetData.map !== endMap ||
+		_finalTargetData.x !== options.endX ||
+		_finalTargetData.y !== options.endY;
+
+	if (isNewTarget) {
 		this.clearPath();
 		resetPathFindingWorker();
 		this.setTargetCoordinatesText(options.endX, options.endY, {
@@ -1315,6 +1524,7 @@ Navigation.navigateTo = function navigateTo(options) {
 
 	if (path && path.length > 0) {
 		const target = path[0];
+		const isSameMap = startMap === endMap;
 
 		this.waitForMapData(function () {
 			const walkableCell = this.findClosestWalkableCell(target.x, target.y);
@@ -1327,6 +1537,13 @@ Navigation.navigateTo = function navigateTo(options) {
 					displayName: displayName
 				};
 				this.findPath(options.startX, options.startY, _targetData.x, _targetData.y);
+				// Same-map only: segmented auto-walk. Cross-map keeps display only.
+				// Only (re)start on a new target so the 500ms recalc loop
+				// never revives a walk the player cancelled manually.
+				if (isSameMap && isNewTarget) {
+					startAutoWalk();
+					followAutoWalk();
+				}
 			} else {
 				this.clear();
 			}

@@ -14,6 +14,7 @@
 		imports: {
 			bson: projectRoot + 'node_modules/bson/lib/bson.mjs',
 			lodash: projectRoot + 'node_modules/lodash-es/lodash.default.js',
+			'granny-ro-js/wasm': projectRoot + 'node_modules/granny-ro-js/dist/granny-ro.wasm.esm.js',
 			'src/': projectRoot + 'src/',
 			'App/': projectRoot + 'src/App/',
 			'Audio/': projectRoot + 'src/Audio/',

@@ -32,6 +32,7 @@ import PACKET from 'Network/PacketStructure.js';
 import Network from 'Network/NetworkManager.js';
 import Events from 'Core/Events.js';
 import CaptchaSelector from 'UI/Components/Captcha/CaptchaSelector.js';
+import Navigation from 'UI/Components/Navigation/Navigation.js';
 import 'Controls/ScreenShot.js';
 
 /**
@@ -130,6 +131,12 @@ function onMouseDown(event) {
 			} else {
 				Session.moveAction = null;
 				Session.autoFollow = false;
+
+				// Manual map click (ground or entity) cancels Navigation:
+				// stops auto-walk and clears route/marker display
+				if (Navigation && Navigation.clear) {
+					Navigation.clear();
+				}
 
 				let stop = false;
 				if (entityOver != Session.Entity) {

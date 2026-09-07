@@ -24,6 +24,7 @@ import htmlText from './MobileUI.html?raw';
 import cssText from './MobileUI.css?raw';
 import glMatrix from 'Vendors/gl-matrix.js';
 import Camera from 'Renderer/Camera.js';
+import Navigation from 'UI/Components/Navigation/Navigation.js';
 import _KEYS from 'Controls/KeyEventHandler.js'; // Currently unused, preserved for future development
 
 const vec2 = glMatrix.vec2;
@@ -504,6 +505,11 @@ function toggleAutoFollow() {
 			root.querySelector('#toggleAutoFollowButton').classList.add('active');
 			Session.autoFollow = true;
 			Session.autoFollowTarget = entityFocus;
+			// Manual auto-follow takes over movement: cancel Navigation
+			// auto-walk and clear its route/marker display
+			if (Navigation && Navigation.clear) {
+				Navigation.clear();
+			}
 			onAutoFollow();
 		}
 	}
@@ -552,6 +558,12 @@ function attackTargeted() {
 		}
 
 		Session.moveAction = pkt;
+
+		// Manual attack walk-to cancels Navigation auto-walk
+		// and clears its route/marker display
+		if (Navigation && Navigation.clear) {
+			Navigation.clear();
+		}
 
 		if (PACKETVER.value >= 20180307) {
 			pkt = new PACKET.CZ.REQUEST_MOVE2();
@@ -660,6 +672,12 @@ function pickUpItem() {
 
 	if (!player) {
 		return;
+	}
+
+	// Manual pickup walk cancels Navigation auto-walk
+	// and clears its route/marker display
+	if (Navigation && Navigation.clear) {
+		Navigation.clear();
 	}
 
 	const closestItem = EntityManager.getClosestEntity(player, Session.Entity.constructor.TYPE_ITEM);
@@ -812,6 +830,12 @@ function moveCharacter(x, y, tileSize) {
 
 	if (!player) {
 		return;
+	}
+
+	// Manual joystick walk cancels Navigation auto-walk
+	// and clears its route/marker display
+	if (Navigation && Navigation.clear) {
+		Navigation.clear();
 	}
 
 	direction[0] = x;
