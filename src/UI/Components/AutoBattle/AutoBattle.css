@@ -1,0 +1,268 @@
+:host {
+	position: absolute;
+	top: 120px;
+	left: 400px;
+	width: 360px;
+	height: 460px;
+}
+
+#AutoBattle {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	background-color: #ece9d8;
+	border: 1px solid #a0a0a0;
+	border-radius: 6px;
+	display: flex;
+	flex-direction: column;
+	font-family: Arial, sans-serif;
+	font-size: 12px;
+	color: #333;
+}
+
+#AutoBattle .titlebar {
+	width: 100%;
+	height: 17px;
+	background-color: white;
+	background-repeat: repeat-x;
+	border-radius: 3px 3px 0 0;
+}
+
+#AutoBattle .titlebar .base {
+	width: 11px;
+	height: 11px;
+	border: none;
+	background-color: transparent;
+	background-repeat: no-repeat;
+	vertical-align: middle;
+}
+
+#AutoBattle .titlebar .text {
+	text-shadow: 1px 1px white;
+	vertical-align: -2px;
+	white-space: nowrap;
+	display: inline-block;
+	height: 13px;
+	font-size: 11px;
+	font-weight: bold;
+}
+
+#AutoBattle .titlebar .left {
+	margin-left: 3px;
+	float: left;
+}
+
+#AutoBattle .titlebar .right {
+	float: right;
+	margin-right: 3px;
+}
+
+#AutoBattle .clear { clear: both; }
+
+#AutoBattle .content {
+	flex: 1;
+	padding: 8px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+#AutoBattle .row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+#AutoBattle .row input[type="number"] {
+	width: 56px;
+	padding: 2px 4px;
+	border: 1px solid #aaa;
+	border-radius: 2px;
+}
+
+#AutoBattle .row input[type="checkbox"] {
+	vertical-align: middle;
+}
+
+#AutoBattle .row select {
+	min-width: 130px;
+	max-width: 160px;
+	padding: 2px;
+	border: 1px solid #aaa;
+	border-radius: 2px;
+}
+
+#AutoBattle .row button {
+	padding: 2px 6px;
+	border: 1px solid #888;
+	border-radius: 3px;
+	background: #f0f0f0;
+	cursor: pointer;
+	font-size: 11px;
+}
+
+#AutoBattle .row button:hover {
+	background: #e0e0e0;
+}
+
+#AutoBattle .section {
+	border: 1px solid #bbb;
+	border-radius: 4px;
+	padding: 6px;
+	background: #f7f7f2;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+#AutoBattle .section-title {
+	font-weight: bold;
+	font-size: 11px;
+	color: #555;
+	border-bottom: 1px solid #ccc;
+	padding-bottom: 2px;
+}
+
+#AutoBattle .main-toggle {
+	justify-content: space-between;
+	background: #fff;
+	border: 1px solid #bbb;
+	border-radius: 4px;
+	padding: 6px 8px;
+}
+
+#AutoBattle .main-toggle .status {
+	font-weight: bold;
+	padding: 2px 8px;
+	border-radius: 3px;
+	background: #ddd;
+}
+
+#AutoBattle .main-toggle .status.on {
+	background: #4caf50;
+	color: white;
+}
+
+#AutoBattle .main-toggle .status.off {
+	background: #f44336;
+	color: white;
+}
+
+#AutoBattle .hint {
+	font-size: 10px;
+	color: #777;
+}
+
+#AutoBattle .tabs {
+	display: flex;
+	gap: 4px;
+}
+
+#AutoBattle .tabs .tab {
+	flex: 1;
+	padding: 4px 0;
+	border: 1px solid #888;
+	border-radius: 3px 3px 0 0;
+	background: #d8d5c5;
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: bold;
+	color: #555;
+}
+
+#AutoBattle .tabs .tab.active {
+	background: #fff;
+	color: #222;
+	border-bottom-color: #fff;
+}
+
+#AutoBattle .tab-panel.hidden {
+	display: none;
+}
+
+#AutoBattle .tab-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+#AutoBattle #ab_recoveryList {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-height: 260px;
+	overflow-y: auto;
+}
+
+#AutoBattle .rec-card {
+	border: 1px solid #aaa;
+	border-radius: 4px;
+	padding: 6px;
+	background: #fff;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+#AutoBattle .rec-card .rec-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+#AutoBattle .rec-card .rec-row:first-child {
+	justify-content: space-between;
+}
+
+#AutoBattle .rec-card .rec-del {
+	padding: 0 6px;
+	border: 1px solid #888;
+	border-radius: 3px;
+	background: #f0f0f0;
+	cursor: pointer;
+	font-size: 11px;
+}
+
+#AutoBattle .rec-card .rec-del:hover {
+	background: #e0a0a0;
+}
+
+#AutoBattle .rec-card select {
+	padding: 2px;
+	border: 1px solid #aaa;
+	border-radius: 2px;
+}
+
+#AutoBattle .rec-card input[type="range"] {
+	flex: 1;
+	min-width: 80px;
+}
+
+#AutoBattle .rec-card .rec-value {
+	min-width: 38px;
+	text-align: right;
+	font-weight: bold;
+}
+
+#AutoBattle .rec-slot {
+	width: 40px;
+	height: 40px;
+	border: 2px dashed #aaa;
+	border-radius: 4px;
+	background: #f4f4f4 no-repeat center center;
+	background-size: 32px 32px;
+	display: inline-block;
+	vertical-align: middle;
+}
+
+#AutoBattle .rec-slot.filled {
+	border-style: solid;
+	border-color: #888;
+}
+
+#AutoBattle .rec-slot.dragover {
+	border-color: #4caf50;
+	background-color: #e8f5e9;
+}

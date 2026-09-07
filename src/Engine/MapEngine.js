@@ -118,6 +118,10 @@ import ClanEngine from './MapEngine/Clan.js';
 import CashShopEngine from './MapEngine/CashShop.js';
 import BankEngine from './MapEngine/Bank.js';
 import AchievementEngine from './MapEngine/Achievement.js';
+import AutoBattleEngine from './MapEngine/AutoBattle.js';
+import AutoBattle from 'UI/Components/AutoBattle/AutoBattle.js';
+import CardBook from 'UI/Components/CardBook/CardBook.js';
+import CardAlbumEngine from './MapEngine/CardAlbum.js';
 
 /**
  * @type {string} mapname
@@ -330,6 +334,11 @@ class MapEngine {
 			if (Configs.get('enableBank')) {
 				BankEngine.init();
 			}
+
+		AutoBattle.prepare();
+		AutoBattleEngine.init();
+		CardAlbumEngine();
+		CardBook.prepare();
 
 			// Prepare UI
 			Escape.prepare();
@@ -798,7 +807,9 @@ function cleanGameUI() {
 		[ShortCut, 'clean'],
 		[Quest, 'clean'],
 		[PartyFriends, 'clean'],
-		[CashShop, 'clean']
+		[CashShop, 'clean'],
+		[AutoBattle, 'remove'],
+		[CardBook, 'remove']
 	];
 
 	for (const [target, method] of tasks) {
@@ -808,6 +819,8 @@ function cleanGameUI() {
 			component[method]();
 		}
 	}
+
+	AutoBattleEngine.stop();
 }
 
 /**

@@ -38,6 +38,8 @@ import SkillList from 'UI/Components/SkillList/SkillList.js';
 import Quest from 'UI/Components/Quest/Quest.js';
 import Achievement from 'UI/Components/Achievement/Achievement.js';
 import Reputation from 'UI/Components/Reputation/Reputation.js';
+import AutoBattle from 'UI/Components/AutoBattle/AutoBattle.js';
+import CardBook from 'UI/Components/CardBook/CardBook.js';
 
 export function createBasicInfo(config) {
 	const {
@@ -156,6 +158,12 @@ export function createBasicInfo(config) {
 				break;
 			case 'repute':
 				Reputation.toggle();
+				break;
+			case 'autobattle':
+				AutoBattle.toggle();
+				break;
+			case 'cardbook':
+				CardBook.toggle();
 				break;
 		}
 	}

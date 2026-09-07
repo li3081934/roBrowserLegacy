@@ -15846,6 +15846,93 @@ PACKET.CZ.SELECTCART.prototype.build = function () {
 	return pkt_buf;
 };
 
+// 0x0b46 - CZ_CARD_ALBUM_LIST_REQ (custom: card collection album)
+PACKET.CZ.CARD_ALBUM_LIST_REQ = function PACKET_CZ_CARD_ALBUM_LIST_REQ() {};
+PACKET.CZ.CARD_ALBUM_LIST_REQ.prototype.build = function () {
+	const pkt_buf = new BinaryWriter(2);
+
+	pkt_buf.writeShort(0x0b46);
+	return pkt_buf;
+};
+
+// 0x0b47 - CZ_CARD_ALBUM_SUBMIT <inv index>.W (custom: card collection album)
+PACKET.CZ.CARD_ALBUM_SUBMIT = function PACKET_CZ_CARD_ALBUM_SUBMIT() {
+	this.index = 0;
+};
+PACKET.CZ.CARD_ALBUM_SUBMIT.prototype.build = function () {
+	const pkt_buf = new BinaryWriter(4);
+
+	pkt_buf.writeShort(0x0b47);
+	pkt_buf.writeShort(this.index);
+	return pkt_buf;
+};
+
+// 0x0b48 - CZ_CARD_ALBUM_ACTIVATE <card id>.L (custom: card collection album)
+PACKET.CZ.CARD_ALBUM_ACTIVATE = function PACKET_CZ_CARD_ALBUM_ACTIVATE() {
+	this.cardId = 0;
+};
+PACKET.CZ.CARD_ALBUM_ACTIVATE.prototype.build = function () {
+	const pkt_buf = new BinaryWriter(6);
+
+	pkt_buf.writeShort(0x0b48);
+	pkt_buf.writeLong(this.cardId);
+	return pkt_buf;
+};
+
+// 0x0b49 - CZ_CARD_ALBUM_DEACTIVATE <card id>.L (custom: card collection album)
+PACKET.CZ.CARD_ALBUM_DEACTIVATE = function PACKET_CZ_CARD_ALBUM_DEACTIVATE() {
+	this.cardId = 0;
+};
+PACKET.CZ.CARD_ALBUM_DEACTIVATE.prototype.build = function () {
+	const pkt_buf = new BinaryWriter(6);
+
+	pkt_buf.writeShort(0x0b49);
+	pkt_buf.writeLong(this.cardId);
+	return pkt_buf;
+};
+
+// 0x0b4a - ZC_CARD_ALBUM_LIST <len>.W <active count>.W { <card id>.L } <unlock count>.W { <card id>.L } <catalog count>.W { <card id>.L <category>.B } (custom)
+PACKET.ZC.CARD_ALBUM_LIST = function PACKET_ZC_CARD_ALBUM_LIST(fp, end) {
+	this.activeIds = new Array();
+	this.cardIds = new Array();
+	this.catalogIds = new Array();
+	this.catalogCats = new Array();
+
+	// Note: `end` here is the packet start offset (see NetworkManager),
+	// so parse strictly by counts, never by `end`.
+	const activeCount = fp.readUShort();
+	for (let i = 0; i < activeCount; ++i) {
+		this.activeIds.push(fp.readLong());
+	}
+	// Legacy alias kept for backward compatibility with older handlers.
+	this.activeId = this.activeIds.length ? this.activeIds[0] : 0;
+
+	const unlockCount = fp.readUShort();
+	for (let i = 0; i < unlockCount; ++i) {
+		this.cardIds.push(fp.readLong());
+	}
+	this.count = this.cardIds.length;
+
+	try {
+		const catalogCount = fp.readUShort();
+		for (let i = 0; i < catalogCount; ++i) {
+			this.catalogIds.push(fp.readLong());
+			this.catalogCats.push(fp.readUChar());
+		}
+	} catch (_e) {
+		// Older server without the catalog segment; catalog stays empty.
+	}
+};
+PACKET.ZC.CARD_ALBUM_LIST.size = -1;
+
+// 0x0b4b - ZC_CARD_ALBUM_ACK <action>.B <result>.B <card id>.L (custom)
+PACKET.ZC.CARD_ALBUM_ACK = function PACKET_ZC_CARD_ALBUM_ACK(fp, end) {
+	this.action = fp.readUChar();
+	this.result = fp.readUChar();
+	this.cardId = fp.readLong();
+};
+PACKET.ZC.CARD_ALBUM_ACK.size = 8;
+
 /**
  * Export
  */

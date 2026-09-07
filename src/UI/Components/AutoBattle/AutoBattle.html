@@ -1,0 +1,67 @@
+<div id="AutoBattle">
+	<div class="titlebar" data-background="basic_interface/titlebar_mid.bmp">
+		<div class="left">
+			<button class="base" data-background="basic_interface/sys_base_off.bmp" data-hover="basic_interface/sys_base_on.bmp"></button>
+			<span class="text" data-text="Auto Battle">Auto Battle</span>
+		</div>
+		<div class="right">
+			<button class="base close" data-background="basic_interface/sys_close_off.bmp" data-hover="basic_interface/sys_close_on.bmp"></button>
+		</div>
+		<div class="clear"></div>
+	</div>
+	<div class="content">
+		<div class="row main-toggle">
+			<label><input type="checkbox" id="ab_enabled"> <span data-text="Enable">Enable</span> ( /ab )</label>
+			<span class="status" id="ab_status">OFF</span>
+		</div>
+
+		<div class="tabs">
+			<button class="tab active" data-tab="basic">Basic</button>
+			<button class="tab" data-tab="recovery">Recovery</button>
+		</div>
+
+		<div class="tab-panel" data-panel="basic">
+			<div class="section">
+				<div class="section-title">Combat</div>
+				<div class="row">
+					<label>Range <input type="number" id="ab_range" min="1" max="30" step="1"></label>
+					<label>Interval <input type="number" id="ab_interval" min="200" max="3000" step="100"> ms</label>
+				</div>
+				<div class="row">
+					<label><input type="checkbox" id="ab_useSkill"> Use Skill</label>
+					<select id="ab_skillId"></select>
+					<label>Lv <input type="number" id="ab_skillLv" min="1" max="10" step="1"></label>
+				</div>
+				<div class="row">
+					<label><input type="checkbox" id="ab_lockCenter"> Lock center</label>
+					<label>Max dist <input type="number" id="ab_maxDist" min="1" max="30" step="1"></label>
+					<button id="ab_setCenter">Set Center</button>
+				</div>
+				<div class="row">
+					<label><input type="checkbox" id="ab_roam"> Roam when idle</label>
+					<label>Roam range <input type="number" id="ab_roamRange" min="1" max="14" step="1"></label>
+				</div>
+			</div>
+
+			<div class="section">
+				<div class="section-title">Loot & Death</div>
+				<div class="row">
+					<label><input type="checkbox" id="ab_loot"> Auto Loot</label>
+					<label><input type="checkbox" id="ab_stopOnDeath"> Stop on Death</label>
+				</div>
+			</div>
+		</div>
+
+		<div class="tab-panel hidden" data-panel="recovery">
+			<div class="section">
+				<div class="section-title">Recovery Rules</div>
+				<div class="row">
+					<button id="ab_addRecovery">Add Recovery</button>
+				</div>
+				<div id="ab_recoveryList"></div>
+				<div class="row hint">Drag an item or skill onto a slot (from Inventory / Skill window, like the shortcut bar).</div>
+			</div>
+		</div>
+
+	</div>
+</div>

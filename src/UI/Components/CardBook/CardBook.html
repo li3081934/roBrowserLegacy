@@ -1,0 +1,45 @@
+<div id="CardBook">
+	<div class="titlebar" data-background="basic_interface/titlebar_mid.bmp">
+		<div class="left">
+			<button class="base" data-background="basic_interface/sys_base_off.bmp" data-hover="basic_interface/sys_base_on.bmp"></button>
+			<span class="text">Card Book</span>
+		</div>
+		<div class="right">
+			<button class="base close" data-background="basic_interface/sys_close_off.bmp" data-hover="basic_interface/sys_close_on.bmp"></button>
+		</div>
+		<div class="clear"></div>
+	</div>
+	<div class="toolbar">
+		<input id="cb-search" class="cb-search" placeholder="Item Search" />
+		<button class="cb-search-btn" data-background="basic_interface/bt_search_normal.bmp" data-hover="basic_interface/bt_search_over.bmp"></button>
+		<select class="cb-sort">
+			<option value="id">按ID</option>
+			<option value="name">按名称</option>
+		</select>
+	</div>
+	<div class="container">
+		<div class="catchips"></div>
+		<div class="gridwrap">
+			<div class="scroll-host">
+				<div class="content"></div>
+			</div>
+		</div>
+	</div>
+	<div class="actionbar">
+		<span class="hint">右键看详情，双击看大图</span>
+		<button class="action-btn">提交</button>
+	</div>
+	<div class="footer">
+		<span class="fstats"><span class="count"><span class="ncnt">0</span> / <span class="mcnt">0</span></span> · <span class="active">生效中: <span class="active-name">未生效</span></span></span>
+		<div class="pagi">
+			<button class="pagi-btn" data-page="first">|◀</button>
+			<button class="pagi-btn" data-page="prev">◀</button>
+			<span class="pagi-count">1/1</span>
+			<button class="pagi-btn" data-page="next">▶</button>
+			<button class="pagi-btn" data-page="last">▶|</button>
+		</div>
+		<label class="show-all"><input type="checkbox" class="show-all-check" /> 显示全部</label>
+		<button class="extend" data-background="basic_interface/btn_resize.bmp"></button>
+	</div>
+	<div class="overlay"></div>
+</div>
