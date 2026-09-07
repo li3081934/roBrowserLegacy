@@ -1,0 +1,27 @@
+src/UI/Components/Navigation/Navigation.js
+  s_0c0af683eab224::t_278f12662aefb7 21-23,145-156,286,304-471,599,630,890-895,903-907,923-932,977,1385,1486-1492,1527,1540-1546
+src/UI/Components/JoystickUI/JoystickCharacterControl.js
+  s_0c0af683eab224::t_278f12662aefb7 20,31-36,66-71
+src/UI/Components/MobileUI/MobileUI.js
+  s_0c0af683eab224::t_278f12662aefb7 27,508-512,562-567,677-682,835-840
+applications/shared/importmap.js
+  s_0c0af683eab224::t_278f12662aefb7 17
+src/Controls/MapControl.js
+  s_0c0af683eab224::t_278f12662aefb7 35,135-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "56dd5b1665de3286f6f12931c03b65f88c04634e",
+  "prompts": {},
+  "sessions": {
+    "s_0c0af683eab224": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9944a772ffe67b1Z40dds6nEl",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
