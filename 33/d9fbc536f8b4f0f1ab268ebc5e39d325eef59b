@@ -1,0 +1,195 @@
+src/UI/Components/StatusIcons/StatusIcons.js
+  s_9adf66804db09e::t_26886175d79522 156-166,170,172-175
+  s_9adf66804db09e::t_0470db21483b56 167-169,171
+src/UI/Components/MobDrop/MobDrop.html
+  s_174c91c30f05ff::t_890d6af3867607 1-29
+src/UI/Components/Navigation/Navigation.css
+  s_174c91c30f05ff::t_1e73d8dd48bfca 263-272
+src/UI/Components/Navigation/Navigation.html
+  s_174c91c30f05ff::t_302ccccea77638 52
+src/UI/Components/MobDrop/MobDrop.js
+  s_174c91c30f05ff::t_3335880f8ff7bd 14-15,39-41
+  s_174c91c30f05ff::t_31022bb7e36630 302
+  s_174c91c30f05ff::t_2ed7b4061709b6 363-366,368-378
+  s_174c91c30f05ff::t_f4165ab3b21308 1-13,16-38,42-69,71-74,76-125,127-133,135-136,221-301,303-362,367,379-386
+  s_174c91c30f05ff::t_5bbf4f82ee01f8 70,75
+  s_174c91c30f05ff::t_02dd8bb5447bc2 126,134,137-220
+src/Network/PacketStructure.js
+  s_174c91c30f05ff::t_8786ff357a7ef8 15936-15972,15974,15976-15985,15989-15994,15998-16002
+  s_9adf66804db09e::t_74c484d62d49c3 15973,15975,15986-15988,15995-15997
+src/Engine/MapEngine/AutoBattle.js
+  s_9adf66804db09e::t_9c2bcc2b7797c6 1161,1167-1168
+  s_9adf66804db09e::t_1cbc0eb469e738 43-46,1062,1066-1073,1077-1097,1134
+  s_9adf66804db09e::t_731a565c0e3cec 928,931-942,953,955
+  s_9adf66804db09e::t_65a270bf12adb8 1128-1129
+  s_9adf66804db09e::t_37bed493a57f70 284-289
+  s_9adf66804db09e::t_21c70af681de02 1009
+  s_9adf66804db09e::t_0d4bfbd1225728 963-964,966
+  s_9adf66804db09e::t_039cecf44694ba 981-996,1006,1010,1015-1017,1019-1020,1022-1055
+  s_9adf66804db09e::t_57cd976d84aa15 1120-1121
+  s_9adf66804db09e::t_84e294757a8bdb 1133,1177-1191
+  s_9adf66804db09e::t_b172edba99b965 1223,1226-1231
+  s_9adf66804db09e::t_157c5eb83cb887 1221
+  s_9adf66804db09e::t_c776c0791d75a6 1222,1253-1254
+  s_9adf66804db09e::t_9f84d726d84e12 303-308
+  s_9adf66804db09e::t_7bfe36088e9c1d 23
+  s_9adf66804db09e::t_433af4541a4c94 358-359,369-371,388-430,1013
+  s_9adf66804db09e::t_ae5c9d762adc0a 608,671
+  s_9adf66804db09e::t_145f8b9898af42 1130-1132
+  s_9adf66804db09e::t_684f71d1d079d5 1220
+  s_9adf66804db09e::t_63999ef3e79b1f 24,965
+  s_9adf66804db09e::t_648bfe8c5c9c2f 280
+  s_9adf66804db09e::t_6145427cc78816 492-501
+  s_9adf66804db09e::t_8cad8aca4d654c 1250
+  s_9adf66804db09e::t_cc0beb804c96fa 1011-1012
+  s_9adf66804db09e::t_8f169747489170 279
+  s_9adf66804db09e::t_85e945e01885de 1122-1124
+  s_9adf66804db09e::t_cde381c5018849 929-930,943-952,954,956-962,967-980
+  s_9adf66804db09e::t_59f94c4c3e90f6 1292-1299,1302,1304-1308,1310-1312
+  s_9adf66804db09e::t_07e449623983e6 502-511
+  s_9adf66804db09e::t_582234b88add79 40-42,1056-1061,1063-1065,1074-1076,1098-1099
+  s_9adf66804db09e::t_c130f01cabbea2 1021
+  s_9adf66804db09e::t_27242869771db9 264-270,278
+  s_9adf66804db09e::t_1abb14790bc470 432
+  s_9adf66804db09e::t_b7747bbdf2a7bd 702
+  s_9adf66804db09e::t_a5884866170c3a 1100-1101
+  s_9adf66804db09e::t_e2fcdef003519a 431,1008,1014,1135,1313,1316,1320-1357
+  s_9adf66804db09e::t_fb2aeba2715aaf 1314-1315
+  s_9adf66804db09e::t_0109b870e20218 39
+  s_9adf66804db09e::t_ca5e109c743fa8 27
+  s_9adf66804db09e::t_be072e0638e7e0 93-257
+  s_9adf66804db09e::t_439d1f44a3c75d 1224
+  s_9adf66804db09e::t_fd9fe54f2680ad 28
+  s_9adf66804db09e::t_e4eee4550a9d04 1309
+  s_9adf66804db09e::t_ff8d3a8af16c52 26
+  s_9adf66804db09e::t_58a3e31b59294f 1358
+  s_9adf66804db09e::t_87370c0059a60d 997-1005,1007,1018
+src/Engine/MapEngine.js
+  s_9adf66804db09e::t_f7b7ecbb8dff63 124
+  s_174c91c30f05ff::t_c97287e5bf3d2d 126,343
+  s_174c91c30f05ff::t_521fe980eedfcd 344-345
+  s_174c91c30f05ff::t_6a2dc606b183fd 816-817
+src/UI/Components/AutoBattle/AutoBattle.js
+  s_9adf66804db09e::t_a8baa6c207f8a6 791
+  s_9adf66804db09e::t_66af76d56dbdef 479,487,490,493,495,499,501,505,509,511-512,515-516,519,525-526,528-529,531,534
+  s_9adf66804db09e::t_abf1e58c4ad73f 212-254,268
+  s_9adf66804db09e::t_fc199c1dc4d5c3 606-607
+  s_9adf66804db09e::t_cc50e78ae97423 191-202
+  s_9adf66804db09e::t_862bedd29c87a5 263-267
+  s_9adf66804db09e::t_09b3796ac0c2c1 604
+  s_9adf66804db09e::t_ad86bc50b65858 318-326
+  s_9adf66804db09e::t_5df86e90551b55 601-602
+  s_9adf66804db09e::t_c0258d75472647 624
+  s_9adf66804db09e::t_eb8ab8d48a4bab 459-462,468,471
+  s_9adf66804db09e::t_4d6c31e7bdca00 260,270,547-595,599,608-609,612-615,617-618,620-621,627-628,630-631,639
+  s_9adf66804db09e::t_e052ab8f5b04d9 20-21,292-294
+  s_9adf66804db09e::t_9bd3056952eb35 269
+  s_9adf66804db09e::t_5d77245b498cb7 629
+  s_9adf66804db09e::t_e5169bd9e1bc6d 634-638
+  s_9adf66804db09e::t_d776b785f90d86 640
+  s_9adf66804db09e::t_9cfffb900e88cf 766-768
+  s_9adf66804db09e::t_2156a81a2c60bc 273
+  s_9adf66804db09e::t_23b50aca2d01b7 261-262,271-272,600,603,605,610-611,616,619,623,625-626,632-633,641-643,645-719
+  s_9adf66804db09e::t_649878c296d411 169-190
+  s_9adf66804db09e::t_0709246803ec44 255-259
+  s_9adf66804db09e::t_29ccbb286f8ba7 761-765
+  s_9adf66804db09e::t_d2ac68292012d8 596-598
+  s_9adf66804db09e::t_824e550ea61c01 644
+  s_9adf66804db09e::t_9f58858b79c866 771-783
+  s_9adf66804db09e::t_3c302f97f431eb 784-787
+  s_9adf66804db09e::t_931e209af6c0d7 622
+src/Engine/MapEngine/Skill.js
+  s_9adf66804db09e::t_7f6411417b80aa 426-434
+  s_9adf66804db09e::t_4100f395d31246 40,422-425
+src/Renderer/ItemObject.js
+  s_9adf66804db09e::t_9349b0cb42d50a 43-44
+src/Network/PacketRegister.js
+  s_174c91c30f05ff::t_8e1d7411d09888 977-983
+src/UI/Components/AutoBattle/AutoBattle.html
+  s_9adf66804db09e::t_952d857b5e223c 115-129
+  s_9adf66804db09e::t_2f2cb4ac4864bf 86-90
+  s_9adf66804db09e::t_e954435e11f31f 21,68-76,78-82,84
+  s_9adf66804db09e::t_13f369a1eb6c06 52,54-57
+  s_9adf66804db09e::t_b757957aa8fbde 50
+  s_9adf66804db09e::t_76dfa207cbfd33 58,60-67,107
+  s_9adf66804db09e::t_c3ceab068d9c8b 91-106
+  s_9adf66804db09e::t_66acaa9d581719 43-47,49
+  s_9adf66804db09e::t_8ba0de7b6a20f5 109,111
+  s_9adf66804db09e::t_c490fead2b72a2 51
+  s_9adf66804db09e::t_56d1a5e755cd65 22-23
+  s_9adf66804db09e::t_617e4d80000a14 53
+  s_9adf66804db09e::t_90f0d3304af8e2 48
+  s_9adf66804db09e::t_c8c446ddbf54e1 59
+src/Engine/MapEngine/MobDrop.js
+  s_9adf66804db09e::t_eeaf3ace1f3834 113
+  s_9adf66804db09e::t_f2dc9cadb84de3 21-34,43,56,80-92
+  s_174c91c30f05ff::t_a1b28c1e0ef978 1-20,35-42,44-55,57-79,93-112
+src/Engine/MapEngine/TeleportAutoSelect.js
+  s_9adf66804db09e::t_9af509a823ff80 1-27
+src/UI/Components/AutoBattle/AutoBattle.css
+  s_9adf66804db09e::t_d6c07d65a9ce90 199-228
+src/Engine/MapEngine/LootRates.js
+  s_9adf66804db09e::t_5a138d9983908f 1-157,162-164,167
+  s_9adf66804db09e::t_61a4980aacfeba 158-161,165-166
+src/Engine/MapEngine/AttackTracker.js
+  s_9adf66804db09e::t_c56e8b7c37fdb0 1-44
+src/UI/Components/Navigation/Navigation.js
+  s_0c0af683eab224::t_60f795f3b37055 553
+  s_174c91c30f05ff::t_666163b7956f34 27
+src/UI/Components/MobDrop/MobDrop.css
+  s_174c91c30f05ff::t_d7f79496a609fb 91,96,106-120
+  s_174c91c30f05ff::t_076103aa35432d 1-90,92-95,97-105,121-190
+src/Engine/MapEngine/Entity.js
+  s_7dac705f52f30f::t_50f456cccc7a9e 897,899
+  s_9adf66804db09e::t_21194313269a85 1595
+  s_9adf66804db09e::t_83d6dc1237f797 50
+  s_9adf66804db09e::t_b6d1260e1ff266 898,900-902,1592-1594,1596-1599
+src/Preferences/AutoBattle.js
+  s_9adf66804db09e::t_4f9121f65ace93 42-45
+  s_9adf66804db09e::t_ba77bdd0fb36e6 46-48
+  s_9adf66804db09e::t_68a216772f3636 53-56
+  s_9adf66804db09e::t_58e65de4fcda00 21-27
+  s_9adf66804db09e::t_d566429ab04f7f 49-52
+src/Network/PacketLength.js
+  s_174c91c30f05ff::t_cef0a5688d3f13 103-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "33d9fbc536f8b4f0f1ab268ebc5e39d325eef59b",
+  "prompts": {},
+  "sessions": {
+    "s_0c0af683eab224": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f9944a772ffe67b1Z40dds6nEl",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    },
+    "s_174c91c30f05ff": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f80e34f3affeXKx9fBdDO32fLr",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    },
+    "s_7dac705f52f30f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fc2c05bf4ffeSHY1qCTOKhZunG",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    },
+    "s_9adf66804db09e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f85ab42c4ffeNkUba2jU0KPtBy",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
