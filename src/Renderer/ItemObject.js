@@ -40,6 +40,8 @@ class ItemObject {
 		/*var dropEffectPostition = [x, y, z];*/ // UNUSED
 		entity.GID = gid;
 		entity.objecttype = Entity.TYPE_ITEM;
+		// Kept for loot filtering (see AutoBattle findLoot).
+		entity.ITID = itemid;
 		entity.position[0] = x;
 		entity.position[1] = y;
 		entity.position[2] = z;

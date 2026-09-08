@@ -18,6 +18,9 @@
 		<div class="tabs">
 			<button class="tab active" data-tab="basic">Basic</button>
 			<button class="tab" data-tab="recovery">Recovery</button>
+			<button class="tab" data-tab="combat">Combat</button>
+			<button class="tab" data-tab="loot">Loot</button>
+			<button class="tab" data-tab="settings">Settings</button>
 		</div>
 
 		<div class="tab-panel" data-panel="basic">
@@ -37,19 +40,21 @@
 					<label>Max dist <input type="number" id="ab_maxDist" min="1" max="30" step="1"></label>
 					<button id="ab_setCenter">Set Center</button>
 				</div>
-				<div class="row">
-					<label><input type="checkbox" id="ab_roam"> Roam when idle</label>
-					<label>Roam range <input type="number" id="ab_roamRange" min="1" max="14" step="1"></label>
-				</div>
+			<div class="row">
+				<label><input type="checkbox" id="ab_roam"> Roam when idle</label>
+				<label>Roam range <input type="number" id="ab_roamRange" min="1" max="14" step="1"></label>
 			</div>
+			<div class="row">
+				<label><input type="checkbox" id="ab_teleport"> 当周围没有目标 <input type="number" id="ab_teleportSec" min="5" max="300" step="1"> 秒使用传送</label>
+			</div>
+		</div>
 
-			<div class="section">
-				<div class="section-title">Loot & Death</div>
-				<div class="row">
-					<label><input type="checkbox" id="ab_loot"> Auto Loot</label>
-					<label><input type="checkbox" id="ab_stopOnDeath"> Stop on Death</label>
-				</div>
+		<div class="section">
+			<div class="section-title">Death</div>
+			<div class="row">
+				<label><input type="checkbox" id="ab_stopOnDeath"> Stop on Death</label>
 			</div>
+		</div>
 		</div>
 
 		<div class="tab-panel hidden" data-panel="recovery">
@@ -60,6 +65,80 @@
 				</div>
 				<div id="ab_recoveryList"></div>
 				<div class="row hint">Drag an item or skill onto a slot (from Inventory / Skill window, like the shortcut bar).</div>
+			</div>
+		</div>
+
+		<div class="tab-panel hidden" data-panel="combat">
+			<div class="section">
+				<div class="section-title">Buff</div>
+				<div class="row">
+					<label><input type="checkbox" id="ab_buffEnabled"> Enable</label>
+				</div>
+				<div class="row">
+					<div class="rec-slot" id="ab_buffSlot0" title="Drag a buff skill here (right-click to clear)"></div>
+					<div class="rec-slot" id="ab_buffSlot1" title="Drag a buff skill here (right-click to clear)"></div>
+					<div class="rec-slot" id="ab_buffSlot2" title="Drag a buff skill here (right-click to clear)"></div>
+					<div class="rec-slot" id="ab_buffSlot3" title="Drag a buff skill here (right-click to clear)"></div>
+					<div class="rec-slot" id="ab_buffSlot4" title="Drag a buff skill here (right-click to clear)"></div>
+				</div>
+				<div class="row hint">Missing buffs are re-cast in slot order, one per tick.</div>
+			</div>
+			<div class="section">
+				<div class="section-title">Target Filter</div>
+				<div id="ab_targetList"></div>
+				<div class="row hint">Checked: only attack these. Unchecked: no filter. Cleared on map change.</div>
+			</div>
+			<div class="section">
+				<div class="section-title">When Attacked</div>
+				<div class="row">
+					<label>Non-target hits:
+						<select id="ab_attackedAction">
+							<option value="ignore">Ignore</option>
+							<option value="retaliate">Retaliate</option>
+							<option value="teleport">Teleport</option>
+						</select>
+					</label>
+				</div>
+				<div class="row">
+					<label>Teleport when attackers &gt; <input type="number" id="ab_attackedTeleportCount" min="0" max="20" step="1"> (0 = off)</label>
+				</div>
+				<div class="row hint">Retaliate fights back until it dies/leaves. Count rule always wins and uses teleport slots.</div>
+			</div>
+		</div>
+
+		<div class="tab-panel hidden" data-panel="loot">
+			<div class="section">
+				<div class="section-title">Loot</div>
+				<div class="row">
+					<label><input type="checkbox" id="ab_loot"> Auto Loot</label>
+				</div>
+				<div class="row">
+					<label><input type="checkbox" id="ab_lootEquip"> Equipment</label>
+					<label><input type="checkbox" id="ab_lootCard"> Card</label>
+				</div>
+				<div class="row">
+					<label><input type="checkbox" id="ab_lootConsumable"> Consumable</label>
+					<label><input type="checkbox" id="ab_lootEtc"> Etc</label>
+				</div>
+				<div class="row">
+					<label>Max weight <input type="number" id="ab_lootMaxWeight" min="0" step="1"> (0 = off)</label>
+				</div>
+				<div class="row">
+					<label>Max rate <input type="number" id="ab_lootMaxRate" min="0" max="100" step="1"> % (100 = off)</label>
+				</div>
+				<div class="row hint">Rates are live per-map values from the server (unknown items always picked).</div>
+			</div>
+		</div>
+
+		<div class="tab-panel hidden" data-panel="settings">
+			<div class="section">
+				<div class="section-title">Teleport</div>
+				<div class="row">
+					<span>传送使用</span>
+					<div class="rec-slot" id="ab_tpSlot0" title="Drag an item or skill here (right-click to clear)"></div>
+					<div class="rec-slot" id="ab_tpSlot1" title="Drag an item or skill here (right-click to clear)"></div>
+				</div>
+				<div class="row hint">No target for a while: use slot 1 first, slot 2 on failure.</div>
 			</div>
 		</div>
 

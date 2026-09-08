@@ -121,7 +121,9 @@ import AchievementEngine from './MapEngine/Achievement.js';
 import AutoBattleEngine from './MapEngine/AutoBattle.js';
 import AutoBattle from 'UI/Components/AutoBattle/AutoBattle.js';
 import CardBook from 'UI/Components/CardBook/CardBook.js';
+import MobDrop from 'UI/Components/MobDrop/MobDrop.js';
 import CardAlbumEngine from './MapEngine/CardAlbum.js';
+import MobDropEngine from './MapEngine/MobDrop.js';
 
 /**
  * @type {string} mapname
@@ -338,7 +340,9 @@ class MapEngine {
 		AutoBattle.prepare();
 		AutoBattleEngine.init();
 		CardAlbumEngine();
+		MobDropEngine();
 		CardBook.prepare();
+		MobDrop.prepare();
 
 			// Prepare UI
 			Escape.prepare();
@@ -809,7 +813,8 @@ function cleanGameUI() {
 		[PartyFriends, 'clean'],
 		[CashShop, 'clean'],
 		[AutoBattle, 'remove'],
-		[CardBook, 'remove']
+		[CardBook, 'remove'],
+		[MobDrop, 'remove']
 	];
 
 	for (const [target, method] of tasks) {

@@ -1,0 +1,190 @@
+:host {
+	position: absolute;
+	top: 120px;
+	left: 120px;
+	width: 560px;
+	max-height: 480px;
+}
+
+#MobDrop {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	background-color: #ece9d8;
+	border: 1px solid #a0a0a0;
+	border-radius: 6px;
+	display: flex;
+	flex-direction: column;
+	font-family: Arial, sans-serif;
+	font-size: 12px;
+	color: #333;
+}
+
+#MobDrop .titlebar {
+	width: 100%;
+	height: 17px;
+	background-color: white;
+	background-repeat: repeat-x;
+	border-radius: 3px 3px 0 0;
+}
+
+#MobDrop .titlebar .base {
+	width: 11px;
+	height: 11px;
+	border: none;
+	background-color: transparent;
+	background-repeat: no-repeat;
+	vertical-align: middle;
+	cursor: pointer;
+}
+
+#MobDrop .titlebar .text {
+	text-shadow: 1px 1px white;
+	vertical-align: -2px;
+	white-space: nowrap;
+	display: inline-block;
+	height: 13px;
+	font-size: 11px;
+	font-weight: bold;
+}
+
+#MobDrop .titlebar .left {
+	margin-left: 3px;
+	float: left;
+}
+
+#MobDrop .titlebar .right {
+	float: right;
+	margin-right: 3px;
+}
+
+#MobDrop .mapname {
+	padding: 4px 8px;
+	font-weight: bold;
+	border-bottom: 1px solid #c0c0c0;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+#MobDrop .container {
+	display: flex;
+	flex: 1;
+	min-height: 200px;
+}
+
+#MobDrop .moblist-wrap {
+	width: 38%;
+	border-right: 1px solid #c0c0c0;
+}
+
+#MobDrop .dropdetail-wrap {
+	width: 62%;
+}
+
+#MobDrop .scroll-host {
+	height: 300px;
+	overflow-y: auto;
+}
+
+#MobDrop .mob {
+	padding: 2px 6px;
+	cursor: pointer;
+	border-bottom: 1px dotted #c0c0c0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+#MobDrop .mob:hover {
+	background-color: #dfe8f5;
+}
+
+#MobDrop .mob.selected {
+	background-color: #c8dcf5;
+	font-weight: bold;
+}
+
+#MobDrop .mob .mobspr {
+	width: 48px;
+	height: 48px;
+	flex: none;
+	pointer-events: none;
+}
+
+#MobDrop .mob .name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	padding: 0 4px;
+}
+
+#MobDrop .mob .qty {
+	color: #666;
+}
+
+#MobDrop .drophead {
+	padding: 4px 6px;
+	font-weight: bold;
+	background-color: #dde3ec;
+	border-bottom: 1px solid #c0c0c0;
+}
+
+#MobDrop .drop {
+	display: flex;
+	align-items: center;
+	padding: 3px 6px;
+	border-bottom: 1px dotted #c0c0c0;
+}
+
+#MobDrop .drop .icon {
+	width: 24px;
+	height: 24px;
+	background-repeat: no-repeat;
+	background-position: center;
+	flex: none;
+}
+
+#MobDrop .drop .name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	padding: 0 4px;
+}
+
+#MobDrop .drop .rate {
+	color: #0a5c0a;
+	font-weight: bold;
+	flex: none;
+}
+
+#MobDrop .drop .nosteal {
+	color: #a00;
+	font-size: 11px;
+	flex: none;
+	padding-left: 4px;
+}
+
+#MobDrop .empty {
+	padding: 12px;
+	color: #666;
+	line-height: 1.8;
+}
+
+#MobDrop .footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 4px 8px;
+	border-top: 1px solid #c0c0c0;
+}
+
+#MobDrop .footer .hint {
+	color: #666;
+}
+
+#MobDrop .footer .refresh-btn {
+	cursor: pointer;
+}

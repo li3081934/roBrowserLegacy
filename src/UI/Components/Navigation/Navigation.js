@@ -24,6 +24,7 @@ import PACKET from 'Network/PacketStructure.js';
 import htmlText from './Navigation.html?raw';
 import cssText from './Navigation.css?raw';
 import MapPathFinder from './MapPathFinder.js';
+import MobDrop from 'UI/Components/MobDrop/MobDrop.js';
 
 /**
  * Create Navigation component
@@ -549,6 +550,7 @@ Navigation.init = function init() {
 	// Bind events
 	root.querySelector('.close').addEventListener('click', () => this.hide());
 	root.querySelector('.search-button').addEventListener('click', () => this.onSearch());
+	root.querySelector('.mobdrop-btn').addEventListener('click', () => MobDrop.toggle());
 
 	const searchInput = root.querySelector('.search-input');
 	searchInput.addEventListener('keypress', e => {

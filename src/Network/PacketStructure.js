@@ -15933,6 +15933,73 @@ PACKET.ZC.CARD_ALBUM_ACK = function PACKET_ZC_CARD_ALBUM_ACK(fp, end) {
 };
 PACKET.ZC.CARD_ALBUM_ACK.size = 8;
 
+// 0x0c45 - CZ_REQ_MAPMOBS (custom: current-map monster list request)
+PACKET.CZ.REQ_MAPMOBS = function PACKET_CZ_REQ_MAPMOBS() {};
+PACKET.CZ.REQ_MAPMOBS.prototype.build = function () {
+	const pkt_buf = new BinaryWriter(2);
+
+	pkt_buf.writeShort(0x0c45);
+	return pkt_buf;
+};
+
+// 0x0c46 - ZC_ACK_MAPMOBS <len>.W <count>.W { <mob id>.W <qty>.W } (custom)
+PACKET.ZC.ACK_MAPMOBS = function PACKET_ZC_ACK_MAPMOBS(fp, end) {
+	this.mobs = new Array();
+
+	// Note: `end` here is the packet start offset (see NetworkManager),
+	// so parse strictly by counts, never by `end`.
+	const count = fp.readUShort();
+	for (let i = 0; i < count; ++i) {
+		this.mobs.push({
+			mobId: fp.readUShort(),
+			qty: fp.readUShort()
+		});
+	}
+};
+PACKET.ZC.ACK_MAPMOBS.size = -1;
+
+// 0x0c47 - CZ_REQ_MOBDROPS <mob id>.W (custom: monster drop-rate request)
+PACKET.CZ.REQ_MOBDROPS = function PACKET_CZ_REQ_MOBDROPS() {
+	this.mobId = 0;
+};
+PACKET.CZ.REQ_MOBDROPS.prototype.build = function () {
+	const pkt_buf = new BinaryWriter(4);
+
+	pkt_buf.writeShort(0x0c47);
+	pkt_buf.writeShort(this.mobId);
+	return pkt_buf;
+};
+
+// 0x0c48 - ZC_ACK_MOBDROPS <len>.W <mob id>.W <drop count>.W { <item id>.L <rate>.L <flags>.B <type>.B <weight>.L } <mvp count>.W { <item id>.L <rate>.L <type>.B <weight>.L } (custom)
+// Rates are per-10000 integers, already adjusted server-side. flags bit0 = steal_protected.
+// type matches ItemType ints 1:1; weight is raw (divide by 10 for display).
+PACKET.ZC.ACK_MOBDROPS = function PACKET_ZC_ACK_MOBDROPS(fp, end) {
+	this.drops = new Array();
+	this.mvpDrops = new Array();
+
+	this.mobId = fp.readUShort();
+	const dropCount = fp.readUShort();
+	for (let i = 0; i < dropCount; ++i) {
+		this.drops.push({
+			itemId: fp.readULong(),
+			rate: fp.readULong(),
+			flags: fp.readUChar(),
+			type: fp.readUChar(),
+			weight: fp.readULong()
+		});
+	}
+	const mvpCount = fp.readUShort();
+	for (let i = 0; i < mvpCount; ++i) {
+		this.mvpDrops.push({
+			itemId: fp.readULong(),
+			rate: fp.readULong(),
+			type: fp.readUChar(),
+			weight: fp.readULong()
+		});
+	}
+};
+PACKET.ZC.ACK_MOBDROPS.size = -1;
+
 /**
  * Export
  */

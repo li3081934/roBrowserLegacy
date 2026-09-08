@@ -47,6 +47,7 @@ import Inventory from 'UI/Components/Inventory/Inventory.js';
 import ShortCut from 'UI/Components/ShortCut/ShortCut.js';
 import StatusIcons from 'UI/Components/StatusIcons/StatusIcons.js';
 import MiniMap from 'UI/Components/MiniMap/MiniMap.js';
+import { recordAttacker as recordAttackTrackerHit } from 'Engine/MapEngine/AttackTracker.js';
 import PartyFriends from 'UI/Components/PartyFriends/PartyFriends.js';
 import Equipment from 'UI/Components/Equipment/Equipment.js';
 import ScreenEffectManager from 'Renderer/ScreenEffectManager.js';
@@ -893,6 +894,12 @@ function onEntityAction(pkt) {
 				ChatBox.TYPE.INFO,
 				ChatBox.FILTER.BATTLE
 			);
+			// Feed auto-battle retaliation/teleport (damage>0 gated above).
+			try {
+				recordAttackTrackerHit(srcEntity.GID, Renderer.tick);
+			} catch (_e) {
+				// ignore
+			}
 		} else if (
 			srcEntity.GID === Session.homunId ||
 			srcEntity.GID === Session.merId ||
@@ -1582,6 +1589,14 @@ function onEntityUseSkillToAttack(pkt) {
 	}
 
 	if (dstEntity) {
+		// Track incoming skill hits for auto-battle retaliation/teleport.
+		if (dstEntity.GID === Session.Entity.GID && pkt.damage > 0) {
+			try {
+				recordAttackTrackerHit(pkt.AID, Renderer.tick);
+			} catch (_e) {
+				// ignore
+			}
+		}
 		const target = pkt.damage ? dstEntity : srcEntity;
 
 		if (pkt.damage && target && !(srcEntity == dstEntity && pkt.action == SkillAction.SKILL)) {

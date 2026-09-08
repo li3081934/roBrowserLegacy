@@ -37,6 +37,7 @@ import Announce from 'UI/Components/Announce/Announce.js';
 import Renderer from 'Renderer/Renderer.js';
 import SkillWindow from 'UI/Components/SkillList/SkillList.js';
 import CartDecoration from 'UI/Components/CartDecoration/CartDecoration.js';
+import { consumeAutoSelectWarpTick } from 'Engine/MapEngine/TeleportAutoSelect.js';
 
 import SnowWeatherEffect from 'Renderer/Effects/SnowWeather.js';
 import RainWeatherEffect from 'Renderer/Effects/RainWeather.js';
@@ -418,6 +419,19 @@ function onSelectSkillList(pkt) {
  * @param {object} pkt - PACKET.ZC.WARPLIST
  */
 function onTeleportList(pkt) {
+	// AutoBattle teleport: pick the first entry without showing the menu.
+	// Timestamped so a stale flag never hijacks a later manual teleport menu.
+	const warpTick = consumeAutoSelectWarpTick();
+	if (warpTick && Renderer.tick - warpTick < 10000) {
+		if (pkt.mapName && pkt.mapName.length) {
+			const _pkt = new PACKET.CZ.SELECT_WARPPOINT();
+			_pkt.SKID = pkt.SKID;
+			_pkt.mapName = pkt.mapName[0];
+			Network.sendPacket(_pkt);
+		}
+		return;
+	}
+
 	// Once selected
 	NpcMenu.onSelectMenu = (skillid, index) => {
 		NpcMenu.remove();

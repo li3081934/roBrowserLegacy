@@ -196,6 +196,36 @@
 	overflow-y: auto;
 }
 
+#AutoBattle #ab_targetList {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	max-height: 180px;
+	overflow-y: auto;
+	background: #fff;
+	border: 1px solid #aaa;
+	border-radius: 4px;
+	padding: 4px 6px;
+}
+
+#AutoBattle #ab_targetList label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+}
+
+#AutoBattle #ab_targetList .tqty {
+	margin-left: auto;
+	color: #777;
+	font-size: 11px;
+}
+
+#AutoBattle #ab_targetList .tempty {
+	color: #777;
+	font-size: 11px;
+}
+
 #AutoBattle .rec-card {
 	border: 1px solid #aaa;
 	border-radius: 4px;

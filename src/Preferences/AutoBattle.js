@@ -18,6 +18,13 @@ export default Preferences.get(
 		skillId: 0,
 		skillLevel: 1,
 		loot: true,
+		// Loot filters (Loot tab). Types follow ItemType ints.
+		// Max weight in display units (raw / 10, e.g. red potion = 7).
+		// Max rate in percent of per-10000 server rate (100 = off).
+		// Unknown items always pass (fail-open).
+		lootTypes: { equip: true, card: true, consumable: true, etc: true },
+		lootMaxWeight: 0,
+		lootMaxRate: 100,
 		hpThreshold: 50,
 		hpPotionId: 501,
 		spThreshold: 20,
@@ -32,6 +39,21 @@ export default Preferences.get(
 		maxDistance: 14,
 		stopOnDeath: true,
 		useTeleportOnNoTarget: false,
+		teleportNoTargetSec: 30,
+		// Teleport slots (settings tab): [slot1, slot2], each
+		// null | { kind: 'item', ITID } | { kind: 'skill', SKID, level }
+		teleportSlots: [null, null],
+		// Buff card (combat tab): master switch + 5 slots, same action shape
+		buffEnabled: false,
+		buffSlots: [null, null, null, null, null],
+		// Target filter (combat tab): mobId list valid only for targetFilterMap.
+		// Empty list or map mismatch = no filtering.
+		targetFilterMap: '',
+		targetFilter: [],
+		// When hit by non-targets: 'ignore' | 'retaliate' | 'teleport'.
+		attackedAction: 'ignore',
+		// Teleport when distinct mob attackers in 5s window exceed this (0 = off).
+		attackedTeleportCount: 3,
 		roamWhenIdle: true,
 		roamInterval: 3000,
 		roamRange: 6,

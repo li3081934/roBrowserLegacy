@@ -153,6 +153,26 @@ StatusIcons.update = function update(index, state, life) {
 	ScreenEffectManager.parseStatus(index);
 };
 
+/**
+ * Check whether a status is currently active
+ *
+ * @param {number} status id (EFST index)
+ * @returns {boolean} true if the icon entry exists and has not expired
+ */
+StatusIcons.has = function has(index) {
+	const entry = _status[index];
+	if (!entry) {
+		return false;
+	}
+	// No usable expiry info (e.g. state packets without duration parsed as
+	// NaN): do NOT report permanent true, otherwise a stale entry would
+	// suppress re-casts forever. Unknown => false (timed re-cast applies).
+	if (typeof entry.end !== 'number' || isNaN(entry.end)) {
+		return false;
+	}
+	return entry.end === Infinity || entry.end > Renderer.tick;
+};
+
 function loadStatusIcon(index) {
 	const isTKM = Session.Entity && DB.isTaeKwon(Session.Entity._job);
 	const tkmVariant = (isTKM && TKM_ICON_OVERRIDE[index]) || null;

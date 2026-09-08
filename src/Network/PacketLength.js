@@ -100,6 +100,11 @@ function init(packetver) {
 		packets_len[0x0b49] = 6;
 		packets_len[0x0b4a] = -1;
 		packets_len[0x0b4b] = 8;
+		// Mob drop info (custom packets for current-map monsters + drop rates)
+		packets_len[0x0c45] = 2;
+		packets_len[0x0c46] = -1;
+		packets_len[0x0c47] = 4;
+		packets_len[0x0c48] = -1;
 		console.log('%c[Network] Packet Length initialized ', 'color:#007000', packetver);
 	} else {
 		console.error(`[Network] Failed to load packet lengths for year ${selectedYear} (path: ${modulePath})`);

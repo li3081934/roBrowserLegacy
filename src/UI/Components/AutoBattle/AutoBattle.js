@@ -17,6 +17,8 @@ import DB from 'DB/DBManager.js';
 import Client from 'Core/Client.js';
 import ChatBox from 'UI/Components/ChatBox/ChatBox.js';
 import Commands from 'Controls/ProcessCommand.js';
+import LootRates from 'Engine/MapEngine/LootRates.js';
+import { getCachedMobs, reqMapMobs } from 'Engine/MapEngine/MobDrop.js';
 import htmlText from './AutoBattle.html?raw';
 import cssText from './AutoBattle.css?raw';
 import 'UI/Elements/Elements.js';
@@ -164,11 +166,107 @@ AutoBattle.init = function init() {
 		});
 	}
 
+	const teleportEl = root.querySelector('#ab_teleport');
+	if (teleportEl) {
+		teleportEl.addEventListener('change', () => {
+			Prefs.useTeleportOnNoTarget = teleportEl.checked;
+			Prefs.save();
+		});
+	}
+
+	const teleportSecEl = root.querySelector('#ab_teleportSec');
+	if (teleportSecEl) {
+		teleportSecEl.addEventListener('change', () => {
+			let v = parseInt(teleportSecEl.value, 10);
+			if (isNaN(v)) v = 30;
+			v = Math.max(5, Math.min(300, v));
+			Prefs.teleportNoTargetSec = v;
+			Prefs.save();
+		});
+	}
+
+	bindTeleportSlot('#ab_tpSlot0', 0);
+	bindTeleportSlot('#ab_tpSlot1', 1);
+
+	const buffEnabledEl = root.querySelector('#ab_buffEnabled');
+	if (buffEnabledEl) {
+		buffEnabledEl.addEventListener('change', () => {
+			Prefs.buffEnabled = buffEnabledEl.checked;
+			Prefs.save();
+		});
+	}
+
+	for (let i = 0; i < 5; i++) {
+		bindBuffSlot(`#ab_buffSlot${i}`, i);
+	}
+
 	// Loot
 	const lootEl = root.querySelector('#ab_loot');
 	if (lootEl) {
 		lootEl.addEventListener('change', () => {
 			Prefs.loot = lootEl.checked;
+			Prefs.save();
+		});
+	}
+
+	function ensureLootTypes() {
+		if (!Prefs.lootTypes || typeof Prefs.lootTypes !== 'object') {
+			Prefs.lootTypes = { equip: true, card: true, consumable: true, etc: true };
+			Prefs.save();
+		}
+		return Prefs.lootTypes;
+	}
+
+	[
+		['#ab_lootEquip', 'equip'],
+		['#ab_lootCard', 'card'],
+		['#ab_lootConsumable', 'consumable'],
+		['#ab_lootEtc', 'etc']
+	].forEach(([selector, key]) => {
+		const el = root.querySelector(selector);
+		if (el) {
+			el.addEventListener('change', () => {
+				ensureLootTypes()[key] = el.checked;
+				Prefs.save();
+			});
+		}
+	});
+
+	const lootMaxWeightEl = root.querySelector('#ab_lootMaxWeight');
+	if (lootMaxWeightEl) {
+		lootMaxWeightEl.addEventListener('change', () => {
+			let v = parseInt(lootMaxWeightEl.value, 10);
+			if (isNaN(v)) v = 0;
+			Prefs.lootMaxWeight = Math.max(0, v);
+			Prefs.save();
+		});
+	}
+
+	const lootMaxRateEl = root.querySelector('#ab_lootMaxRate');
+	if (lootMaxRateEl) {
+		lootMaxRateEl.addEventListener('change', () => {
+			let v = parseInt(lootMaxRateEl.value, 10);
+			if (isNaN(v)) v = 100;
+			Prefs.lootMaxRate = Math.max(0, Math.min(100, v));
+			Prefs.save();
+		});
+	}
+
+	const attackedActionEl = root.querySelector('#ab_attackedAction');
+	if (attackedActionEl) {
+		attackedActionEl.addEventListener('change', () => {
+			const v = attackedActionEl.value;
+			Prefs.attackedAction = (v === 'retaliate' || v === 'teleport') ? v : 'ignore';
+			Prefs.save();
+		});
+	}
+
+	const attackedCountEl = root.querySelector('#ab_attackedTeleportCount');
+	if (attackedCountEl) {
+		attackedCountEl.addEventListener('change', () => {
+			let v = parseInt(attackedCountEl.value, 10);
+			if (isNaN(v)) v = 0;
+			Prefs.attackedTeleportCount = Math.max(0, Math.min(20, v));
 			Prefs.save();
 		});
 	}
@@ -191,6 +289,9 @@ AutoBattle.init = function init() {
 			root.querySelectorAll('.tab-panel').forEach(panel => {
 				panel.classList.toggle('hidden', panel.getAttribute('data-panel') !== name);
 			});
+			if (name === 'combat') {
+				renderTargetList();
+			}
 		});
 	});
 
@@ -212,6 +313,15 @@ AutoBattle.init = function init() {
 			updateStatus();
 			syncUIFromPrefs();
 		}, ['ab', 'autob']);
+	}
+
+	if (!Commands.isEnabled('abstatus')) {
+		Commands.add('abstatus', 'Show auto-battle diagnostics', () => {
+			const stats = AutoBattleEngine.getStats();
+			Object.keys(stats).forEach(key => {
+				ChatBox.addText(`[abstatus] ${key}: ${stats[key]}`, ChatBox.TYPE.INFO, ChatBox.FILTER.PUBLIC_LOG);
+			});
+		}, []);
 	}
 
 	let _nextRecoveryId = 1;
@@ -346,16 +456,19 @@ AutoBattle.init = function init() {
 		});
 		slot.addEventListener('drop', event => {
 			slot.classList.remove('dragover');
-			onRecoverySlotDrop(event, rule, slot);
+			if (onActionSlotDrop(event, action => { rule.action = action; })) {
+				Prefs.save();
+				renderActionSlot(slot, rule.action);
+			}
 		});
 		slot.addEventListener('contextmenu', event => {
 			event.preventDefault();
 			rule.action = null;
 			Prefs.save();
-			renderRecoverySlot(slot, rule);
+			renderActionSlot(slot, rule.action);
 		});
 		useRow.appendChild(slot);
-		renderRecoverySlot(slot, rule);
+		renderActionSlot(slot, rule.action);
 
 		card.appendChild(headRow);
 		card.appendChild(condRow);
@@ -363,7 +476,7 @@ AutoBattle.init = function init() {
 		return card;
 	}
 
-	function onRecoverySlotDrop(event, rule, slot) {
+	function onActionSlotDrop(event, setAction) {
 		let data, element;
 		event.stopImmediatePropagation();
 		event.preventDefault();
@@ -371,53 +484,54 @@ AutoBattle.init = function init() {
 			data = JSON.parse(event.dataTransfer.getData('Text'));
 			element = data.data;
 		} catch (_e) {
-			return;
+			return false;
 		}
 		if (!data || !element) {
-			return;
+			return false;
 		}
 		if (data.type !== 'item' && data.type !== 'skill') {
-			return;
+			return false;
 		}
+		let action = null;
 		if (data.type === 'item') {
 			const ITID = element.ITID;
 			if (typeof ITID !== 'number') {
-				return;
+				return false;
 			}
-			rule.action = { kind: 'item', ITID: ITID };
+			action = { kind: 'item', ITID: ITID };
 		} else {
 			const SKID = element.SKID;
 			if (typeof SKID !== 'number') {
-				return;
+				return false;
 			}
 			let level = element.selectedLevel || element.level || 1;
 			level = Math.max(1, Math.min(10, parseInt(level, 10) || 1));
-			rule.action = { kind: 'skill', SKID: SKID, level: level };
+			action = { kind: 'skill', SKID: SKID, level: level };
 		}
-		Prefs.save();
-		renderRecoverySlot(slot, rule);
+		setAction(action);
+		return true;
 	}
 
-	function renderRecoverySlot(slot, rule) {
-		slot.classList.toggle('filled', !!(rule.action));
+	function renderActionSlot(slot, action) {
+		slot.classList.toggle('filled', !!(action));
 		slot.style.backgroundImage = '';
 		slot.removeAttribute('data-tooltip');
-		if (!rule.action) {
+		if (!action) {
 			slot.title = 'Drag an item or skill here (right-click to clear)';
 			return;
 		}
 		let file = null;
 		let name = '';
-		if (rule.action.kind === 'skill') {
-			const info = SkillInfo[rule.action.SKID] || {};
+		if (action.kind === 'skill') {
+			const info = SkillInfo[action.SKID] || {};
 			file = info.Name || null;
-			name = info.SkillName || info.Name || `Skill ${rule.action.SKID}`;
-			name += ` Lv${rule.action.level || 1}`;
+			name = info.SkillName || info.Name || `Skill ${action.SKID}`;
+			name += ` Lv${action.level || 1}`;
 		} else {
-			const it = DB.getItemInfo(rule.action.ITID);
+			const it = DB.getItemInfo(action.ITID);
 			if (it) {
 				file = it.identifiedResourceName;
-				name = `Item ${rule.action.ITID}`;
+				name = `Item ${action.ITID}`;
 			}
 		}
 		if (!file) {
@@ -427,6 +541,179 @@ AutoBattle.init = function init() {
 		Client.loadFile(`${DB.INTERFACE_PATH}item/${file}.bmp`, url => {
 			slot.style.backgroundImage = `url(${url})`;
 			slot.title = name;
+		});
+	}
+
+	function ensureTeleportSlots() {
+		if (!Array.isArray(Prefs.teleportSlots)) {
+			Prefs.teleportSlots = [null, null];
+			Prefs.save();
+		}
+		while (Prefs.teleportSlots.length < 2) {
+			Prefs.teleportSlots.push(null);
+		}
+		return Prefs.teleportSlots;
+	}
+
+	function bindTeleportSlot(selector, index) {
+		const slot = root.querySelector(selector);
+		if (!slot) {
+			return;
+		}
+		slot.addEventListener('dragover', event => {
+			event.stopImmediatePropagation();
+			event.preventDefault();
+			slot.classList.add('dragover');
+		});
+		slot.addEventListener('dragleave', () => {
+			slot.classList.remove('dragover');
+		});
+		slot.addEventListener('drop', event => {
+			slot.classList.remove('dragover');
+			if (onActionSlotDrop(event, action => { ensureTeleportSlots()[index] = action; })) {
+				Prefs.save();
+				renderActionSlot(slot, ensureTeleportSlots()[index]);
+			}
+		});
+		slot.addEventListener('contextmenu', event => {
+			event.preventDefault();
+			ensureTeleportSlots()[index] = null;
+			Prefs.save();
+			renderActionSlot(slot, null);
+		});
+	}
+
+	function renderTeleportSlots() {
+		const slots = ensureTeleportSlots();
+		['#ab_tpSlot0', '#ab_tpSlot1'].forEach((selector, index) => {
+			const slot = root.querySelector(selector);
+			if (slot) {
+				renderActionSlot(slot, slots[index]);
+			}
+		});
+	}
+
+	function ensureBuffSlots() {
+		if (!Array.isArray(Prefs.buffSlots)) {
+			Prefs.buffSlots = [null, null, null, null, null];
+			Prefs.save();
+		}
+		while (Prefs.buffSlots.length < 5) {
+			Prefs.buffSlots.push(null);
+		}
+		return Prefs.buffSlots;
+	}
+
+	function bindBuffSlot(selector, index) {
+		const slot = root.querySelector(selector);
+		if (!slot) {
+			return;
+		}
+		slot.addEventListener('dragover', event => {
+			event.stopImmediatePropagation();
+			event.preventDefault();
+			slot.classList.add('dragover');
+		});
+		slot.addEventListener('dragleave', () => {
+			slot.classList.remove('dragover');
+		});
+		slot.addEventListener('drop', event => {
+			slot.classList.remove('dragover');
+			if (onActionSlotDrop(event, action => { ensureBuffSlots()[index] = action; })) {
+				Prefs.save();
+				renderActionSlot(slot, ensureBuffSlots()[index]);
+			}
+		});
+		slot.addEventListener('contextmenu', event => {
+			event.preventDefault();
+			ensureBuffSlots()[index] = null;
+			Prefs.save();
+			renderActionSlot(slot, null);
+		});
+	}
+
+	function renderBuffSlots() {
+		const slots = ensureBuffSlots();
+		for (let i = 0; i < 5; i++) {
+			const slot = root.querySelector(`#ab_buffSlot${i}`);
+			if (slot) {
+				renderActionSlot(slot, slots[i]);
+			}
+		}
+	}
+
+	let _targetRequestedMap = null;
+
+	function getTargetFilter() {
+		if (Array.isArray(Prefs.targetFilter)) {
+			return Prefs.targetFilter;
+		}
+		return [];
+	}
+
+	function renderTargetList() {
+		const list = root.querySelector('#ab_targetList');
+		if (!list) {
+			return;
+		}
+		let mapKey = '';
+		try {
+			LootRates.refreshIfNeeded();
+			mapKey = LootRates.getMapKey() || '';
+		} catch (_e) {
+			mapKey = '';
+		}
+		let mobs = [];
+		try {
+			mobs = (getCachedMobs() || []).slice().sort((a, b) => a.mobId - b.mobId);
+		} catch (_e) {
+			mobs = [];
+		}
+		if (!mapKey || !mobs.length) {
+			if (_targetRequestedMap !== mapKey) {
+				_targetRequestedMap = mapKey;
+				try {
+					reqMapMobs();
+				} catch (_e) {
+					// ignore
+				}
+			}
+			list.innerHTML = '<div class="tempty">Loading map monsters… reopen this tab.</div>';
+			return;
+		}
+		_targetRequestedMap = mapKey;
+		const active = Prefs.targetFilterMap === mapKey ? getTargetFilter() : [];
+		list.innerHTML = '';
+		mobs.forEach(mob => {
+			const label = document.createElement('label');
+			const box = document.createElement('input');
+			box.type = 'checkbox';
+			box.checked = active.indexOf(mob.mobId) !== -1;
+			box.addEventListener('change', () => {
+				const cur = LootRates.getMapKey() || '';
+				const set = new Set(Prefs.targetFilterMap === cur ? getTargetFilter() : []);
+				if (box.checked) {
+					set.add(mob.mobId);
+				} else {
+					set.delete(mob.mobId);
+				}
+				Prefs.targetFilterMap = cur;
+				Prefs.targetFilter = Array.from(set);
+				Prefs.save();
+			});
+			label.appendChild(box);
+			let monsterName = `Unknown (${mob.mobId})`;
+			try {
+				monsterName = DB.getMonsterName(mob.mobId) || monsterName;
+			} catch (_e) {
+				// keep fallback
+			}
+			label.appendChild(document.createTextNode(` ${monsterName}`));
+			const qty = document.createElement('span');
+			qty.className = 'tqty';
+			qty.textContent = `x ${mob.qty}`;
+			label.appendChild(qty);
+			list.appendChild(label);
 		});
 	}
 
@@ -471,11 +758,37 @@ AutoBattle.init = function init() {
 		if (ro) ro.checked = !!Prefs.roamWhenIdle;
 		const rr = root.querySelector('#ab_roamRange');
 		if (rr) rr.value = Prefs.roamRange;
+		const tp = root.querySelector('#ab_teleport');
+		if (tp) tp.checked = !!Prefs.useTeleportOnNoTarget;
+		const tps = root.querySelector('#ab_teleportSec');
+		if (tps) tps.value = Prefs.teleportNoTargetSec;
+		renderTeleportSlots();
+		const be = root.querySelector('#ab_buffEnabled');
+		if (be) be.checked = !!Prefs.buffEnabled;
+		renderBuffSlots();
 		const lo = root.querySelector('#ab_loot');
 		if (lo) lo.checked = !!Prefs.loot;
+		const lt = ensureLootTypes();
+		const le = root.querySelector('#ab_lootEquip');
+		if (le) le.checked = lt.equip !== false;
+		const lc = root.querySelector('#ab_lootCard');
+		if (lc) lc.checked = lt.card !== false;
+		const lco = root.querySelector('#ab_lootConsumable');
+		if (lco) lco.checked = lt.consumable !== false;
+		const letc = root.querySelector('#ab_lootEtc');
+		if (letc) letc.checked = lt.etc !== false;
+		const lmw = root.querySelector('#ab_lootMaxWeight');
+		if (lmw) lmw.value = Prefs.lootMaxWeight;
+		const lmr = root.querySelector('#ab_lootMaxRate');
+		if (lmr) lmr.value = Prefs.lootMaxRate;
+		const aa = root.querySelector('#ab_attackedAction');
+		if (aa) aa.value = Prefs.attackedAction === 'retaliate' || Prefs.attackedAction === 'teleport' ? Prefs.attackedAction : 'ignore';
+		const atc = root.querySelector('#ab_attackedTeleportCount');
+		if (atc) atc.value = Prefs.attackedTeleportCount;
 		const so = root.querySelector('#ab_stopOnDeath');
 		if (so) so.checked = !!Prefs.stopOnDeath;
 		renderRecoveryList();
+		renderTargetList();
 		updateStatus();
 		refreshSkillState();
 	}
