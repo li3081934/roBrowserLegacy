@@ -1409,9 +1409,16 @@ const BUFF_STATUS_MAP = {
 	[SkillId.PR_GLORIA]: 21 // EFST_GLORIA
 };
 
-const BUFF_RECAST_MS = 60000;
+const BUFF_RECAST_MS = 60000; // unverifiable buffs only (unmapped skills, items)
+const BUFF_MAPPED_RECAST_MS = 8000; // mapped skills: icon is authoritative, gate only bounds dud retries
 
 const _buffLastCast = [0, 0, 0, 0, 0];
+
+// Last tick a buff *skill* was sent (Renderer.tick). Idle waits for the
+// send to land instead of engaging immediately.
+let _lastBuffSkillSendTick = 0;
+// Grace after a buff send during which idle holds engagement for it to land.
+const BUFF_SETTLE_MS = 2500;
 
 function isStatusIconActive(efst) {
 	// Single source of truth: StatusIcons is fed by Entity's
@@ -1426,15 +1433,44 @@ function isStatusIconActive(efst) {
 	return false;
 }
 
+function buffRecastMs(action) {
+	if (action && action.kind === 'skill' && typeof BUFF_STATUS_MAP[action.SKID] === 'number') {
+		return BUFF_MAPPED_RECAST_MS;
+	}
+	return BUFF_RECAST_MS;
+}
+
 function isBuffActive(action, slotIndex, now) {
-	// Just casted: avoid spam while the state packet is in flight
-	if (now - (_buffLastCast[slotIndex] || 0) < BUFF_RECAST_MS) {
+	// Send-gate: bounds retries while the result is unknown. Mapped skills
+	// get a short gate because the live icon (below) is authoritative and
+	// the casting state already covers the in-flight window; a dud send
+	// therefore retries in seconds, not minutes. Unverifiable buffs keep
+	// the long gate (it is their only anti-spam: no cast state for items,
+	// no icon for unmapped skills).
+	if (now - (_buffLastCast[slotIndex] || 0) < buffRecastMs(action)) {
 		return true;
 	}
 	if (action.kind === 'skill') {
 		const efst = BUFF_STATUS_MAP[action.SKID];
 		if (typeof efst === 'number') {
 			return isStatusIconActive(efst);
+		}
+	}
+	return false;
+}
+
+/**
+ * True while any buff slot still needs a cast (same lenses as upkeep).
+ * Used by idle to hold engagement until fresh sends land.
+ */
+function buffDemandExists(now) {
+	if (!Prefs.buffEnabled) {
+		return false;
+	}
+	const slots = Array.isArray(Prefs.buffSlots) ? Prefs.buffSlots : [];
+	for (let i = 0; i < slots.length; i++) {
+		if (slots[i] && !isBuffActive(slots[i], i, now)) {
+			return true;
 		}
 	}
 	return false;
@@ -1456,6 +1492,9 @@ function tryKeepBuffs(now) {
 		let ok = false;
 		if (action.kind === 'skill') {
 			ok = useSkillOnSelf(action.SKID, action.level);
+			if (ok) {
+				_lastBuffSkillSendTick = now;
+			}
 		} else {
 			const ui = Inventory.getUI();
 			const item = ui && ui.getItemById ? ui.getItemById(action.ITID) : null;
@@ -1530,6 +1569,15 @@ function updateIdle(now) {
 	upkeep(now);
 	if (_state !== ST_IDLE) {
 		// Upkeep cast a skill: satellite state took over.
+		return;
+	}
+
+	// Idle tops up buffs before engaging: when a buff is still missing and
+	// a buff skill was just sent, hold engagement a moment for it to land
+	// instead of chasing right away. Anything else (blocked sends, dud
+	// sends past the settle window) engages normally, so idle never stands
+	// still forever waiting.
+	if (buffDemandExists(now) && (isCastDisplayActive() || now - _lastBuffSkillSendTick < BUFF_SETTLE_MS)) {
 		return;
 	}
 
@@ -1899,6 +1947,7 @@ function start() {
 	_combatDisrupted = false;
 	_pendingCast = null;
 	_castLastInfo = '-';
+	_lastBuffSkillSendTick = 0;
 	// Fresh round: clear buff re-cast gates so enabling always tops up
 	// actually-missing buffs (mapped skills are still skipped via live
 	// StatusIcons check when genuinely active).
