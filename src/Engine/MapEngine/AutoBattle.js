@@ -33,8 +33,7 @@ const vec2 = glMatrix.vec2;
 
 let _timer = null;
 let _enabled = false;
-let _lastAttackTick = 0;
-let _lastLootTick = 0;
+const TICK_MS = 200;
 let _lastRoamTick = 0;
 let _lastTargetSeenTick = 0;
 let _tickCount = 0;
@@ -46,6 +45,44 @@ const MOVE_STUCK_MS = 3000;
 const MOVE_TIMEOUT_MS = 10000;
 let _roamDest = null;
 let _killCount = 0;
+
+// ---- State machine (idle|chase|combat|loot|resting|casting) ----
+// Packets are sent on state entry / transitions only; while staying in a
+// state the tick only monitors. The server maintains continuous attack,
+// walk completion auto-fires the stashed moveAction (MapEngine onWalkEnd).
+const ST_IDLE = 'idle';
+const ST_CHASE = 'chase';
+const ST_COMBAT = 'combat';
+const ST_LOOT = 'loot';
+const ST_RESTING = 'resting';
+const ST_CASTING = 'casting';
+let _state = ST_IDLE;
+let _stateTick = 0;
+let _stateGID = null; // bound target GID for chase/combat/loot
+let _statePos = null; // [x, y] target snapshot at last chase-move send
+let _planFailCount = 0;
+let _lootLastSend = 0;
+const LOOT_TIMEOUT_MS = 10000;
+const LOOT_RESEND_MS = 2000;
+// Chase: resend move only when the target walked this many cells away
+// from the snapshot (or the watchdog dropped our move).
+const CHASE_REPATH_CELLS = 3;
+// Combat (normal attack): safety-net re-fire when the server seemingly
+// stopped without any event (target alive, in range, us idle).
+const COMBAT_REATTACK_MS = 5000;
+// Combat (attack skill): re-fire no earlier than this after the last fire,
+// extended by the observed cast length (client has no Delay/Cooldown data).
+const SKILL_REFIRE_FLOOR_MS = 500;
+const SKILL_REFIRE_CAST_MARGIN_MS = 200;
+let _skillLastFire = 0;
+// Set when our own skill cast interrupted continuous attack: refire once.
+let _combatDisrupted = false;
+// Casting satellite state: remembers where to resume.
+let _pendingCast = null; // { skillId, sentWall, confirmed, barStartWall, delay, returnState, result }
+const _skillCastLen = {}; // SKID -> last observed cast ms ('instant' for none)
+let _castLastInfo = '-';
+const CAST_CONFIRM_MS = 800; // wait for server ack before judging instant skills
+const CAST_TIMEOUT_EXTRA_MS = 3000; // hard backstop (stalled render loop, lost packets)
 
 function isEnabled() {
 	return _enabled && Prefs.enabled;
@@ -127,6 +164,10 @@ function sendSitDown() {
 	if (player.walk && player.walk.total !== 0) {
 		return false;
 	}
+	// Sitting is rejected server-side while casting; don't waste the packet.
+	if (isCastDisplayActive()) {
+		return false;
+	}
 	let pkt;
 	if (PACKETVER.value >= 20180307) {
 		pkt = new PACKET.CZ.REQUEST_ACT2();
@@ -157,36 +198,196 @@ function sendStandUp() {
 	return true;
 }
 
-let _resting = false;
+function setState(next, now) {
+	if (_state === next) {
+		return;
+	}
+	_state = next;
+	_stateTick = (typeof now === 'number') ? now : Renderer.tick;
+	if (next !== ST_CHASE && next !== ST_COMBAT && next !== ST_LOOT) {
+		_stateGID = null;
+	}
+	if (next !== ST_CHASE) {
+		_statePos = null;
+	}
+	_planFailCount = 0;
+}
+
+function getState() {
+	return _state;
+}
+
+function useSkillMode() {
+	return !!(Prefs.useSkill && Prefs.skillId);
+}
+
+function ownMovePending() {
+	return !!(_moveActionPkt && Session.moveAction === _moveActionPkt);
+}
+
+function foreignMoveActive() {
+	return !!(Session.moveAction && Session.moveAction !== _moveActionPkt);
+}
+
+function isCastDisplayActive() {
+	const p = getPlayer();
+	const cast = p && p.cast;
+	if (!cast || !cast.display || !(cast.delay > 0)) {
+		return false;
+	}
+	return (Date.now() - cast.tick) < cast.delay;
+}
 
 /**
- * Sit-to-recover state machine (independent from recoveryRules).
- * - not resting + sitVal <= sitThreshold -> start resting (sit, block combat)
- * - resting + standVal >= standThreshold -> stop resting (stand, resume)
- * - resting otherwise -> keep sitting, block combat
- * Returns 'resting' when the tick is consumed, 'stood-up' on release, null otherwise.
+ * Global send guard: while busy, combat/loot/roam packets must not go out.
+ * Casting (satellite state or visible bar), resting/sitting and our own
+ * in-flight move each block new sends.
  */
-function handleSitRest() {
+function isBusy() {
+	if (_state === ST_CASTING || _state === ST_RESTING) {
+		return true;
+	}
+	if (isCastDisplayActive()) {
+		return true;
+	}
+	if (isSitting()) {
+		return true;
+	}
+	if (ownMovePending()) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Enter the casting satellite state. Sending the skill and entering must
+ * be atomic (same code path) so there is no blind window.
+ */
+function enterCasting(returnState, skillId) {
+	if (_state === ST_CASTING) {
+		return;
+	}
+	const learned = _skillCastLen[skillId];
+	_pendingCast = {
+		skillId: skillId || 0,
+		sentWall: Date.now(),
+		confirmed: false,
+		barStartWall: 0,
+		delay: (typeof learned === 'number' && learned > 0) ? learned : 0,
+		returnState: returnState === ST_CASTING ? ST_IDLE : returnState,
+		result: '-'
+	};
+	setState(ST_CASTING, Renderer.tick);
+}
+
+function exitCasting(result, now) {
+	const ret = (_pendingCast && _pendingCast.returnState) || ST_IDLE;
+	const skillId = _pendingCast && _pendingCast.skillId;
+	_castLastInfo = `${skillId || '?'}:${result}`;
+	_pendingCast = null;
+	// Our own cast stopped continuous attack: refire once when resuming
+	// normal-attack combat (skill-mode combat re-fires on its own beat).
+	if (ret === ST_COMBAT && !useSkillMode()) {
+		_combatDisrupted = true;
+	}
+	setState(ret, now);
+}
+
+function updateCasting(now) {
+	const p = getPlayer();
+	const wall = Date.now();
+	const cast = p && p.cast;
+	const displaying = !!(cast && cast.display && cast.delay > 0);
+	if (displaying) {
+		if (!_pendingCast.confirmed) {
+			_pendingCast.confirmed = true;
+			_pendingCast.barStartWall = wall;
+		}
+		_pendingCast.delay = cast.delay;
+		if (_pendingCast.skillId) {
+			_skillCastLen[_pendingCast.skillId] = cast.delay;
+		}
+		const elapsed = wall - cast.tick;
+		if (elapsed >= cast.delay) {
+			exitCasting('ok', now);
+			return;
+		}
+		if (elapsed > cast.delay + CAST_TIMEOUT_EXTRA_MS) {
+			exitCasting('timeout', now);
+		}
+		return;
+	}
+	// No bar visible.
+	const elapsed = wall - _pendingCast.sentWall;
+	if (!_pendingCast.confirmed) {
+		// Waiting for the server ack; instant-cast skills never show a bar.
+		if (elapsed < CAST_CONFIRM_MS) {
+			return;
+		}
+		exitCasting('instant', now);
+		return;
+	}
+	// Bar was showing, now gone early = cancelled (e.g. ZC.DISPEL).
+	const shownFor = wall - (_pendingCast.barStartWall || _pendingCast.sentWall);
+	if (shownFor >= _pendingCast.delay * 0.95) {
+		exitCasting('ok', now);
+		return;
+	}
+	const limit = Math.max(_pendingCast.delay, CAST_CONFIRM_MS) + CAST_TIMEOUT_EXTRA_MS;
+	if (elapsed > limit) {
+		exitCasting('timeout', now);
+		return;
+	}
+	exitCasting('cancelled', now);
+}
+
+/**
+ * Sit-to-recover as a real state (independent from recoveryRules).
+ */
+function updateResting(now) {
 	const cfg = getSitRecovery();
 	if (!cfg.enabled) {
-		_resting = false;
-		return null;
+		sendStandUp();
+		setState(ST_IDLE, now);
+		return;
 	}
-	if (_resting) {
-		if (getSitPercent(cfg.standTarget) >= cfg.standThreshold) {
-			_resting = false;
-			sendStandUp();
-			return 'stood-up';
+	if (getSitPercent(cfg.standTarget) >= cfg.standThreshold) {
+		sendStandUp();
+		setState(ST_IDLE, now);
+		return;
+	}
+	sendSitDown();
+	// Emergency escape still wins while resting (stand + teleport).
+	const countThreshold = typeof Prefs.attackedTeleportCount === 'number' ? Prefs.attackedTeleportCount : 0;
+	if (countThreshold > 0 && getMobAttackers(now).length > countThreshold) {
+		if (tryTeleportSlots()) {
+			_lastTargetSeenTick = now;
+			_retaliateGID = null;
+			setState(ST_IDLE, now);
 		}
-		sendSitDown();
-		return 'resting';
+	}
+}
+
+function maybeEnterResting(now) {
+	if (_state === ST_RESTING || _state === ST_CASTING) {
+		return false;
+	}
+	const cfg = getSitRecovery();
+	if (!cfg.enabled) {
+		return false;
 	}
 	if (getSitPercent(cfg.sitTarget) <= cfg.sitThreshold) {
-		_resting = true;
+		// Abandon our own chase/pickup move so the sit packet is not
+		// blocked by it; the server stops the walk on sit. Manual moves
+		// are left alone (sit goes out once they finish).
+		if (ownMovePending()) {
+			dropMoveAction();
+		}
+		setState(ST_RESTING, now);
 		sendSitDown();
-		return 'resting';
+		return true;
 	}
-	return null;
+	return false;
 }
 
 function isMobEntity(entity) {
@@ -621,6 +822,9 @@ function useSkillOnSelf(skillId, level) {
 	pkt.selectedLevel = lv;
 	pkt.targetID = player.GID;
 	Network.sendPacket(pkt);
+	// Atomic with the send: track the cast in the satellite state so the
+	// blind window (before the server ack creates the cast bar) is covered.
+	enterCasting(_state, SKID);
 	return true;
 }
 
@@ -639,51 +843,63 @@ function useItemByIndex(index) {
 	Network.sendPacket(pkt);
 }
 
-function sendAttack(target) {
+function getCombatRange() {
 	const player = getPlayer();
-	if (!player) {
-		return false;
+	if (useSkillMode()) {
+		const skillId = Prefs.skillId;
+		const level = Prefs.skillLevel || 1;
+		const skill = SkillList.getUI() ? SkillList.getUI().getSkillById(skillId) : null;
+		if (skill) {
+			return skill.attackRange + 1;
+		}
+		if (SkillInfo[skillId]) {
+			return SkillInfo[skillId].AttackRange[level - 1] + 1;
+		}
 	}
-
-	// amotion throttle
-	if (player.amotionTick && player.amotionTick > Renderer.tick) {
-		return false;
-	}
-
-	// already has pending move action
-	if (Session.moveAction) {
-		return false;
-	}
-
-	// Use skill if configured
-	if (Prefs.useSkill && Prefs.skillId) {
-		return sendSkillAttack(target);
-	}
-
-	return sendNormalAttack(target);
+	return player ? player.attack_range + 1 : 1;
 }
 
-function sendNormalAttack(target) {
+/**
+ * Pathfind-only probe shared by chase/combat. Returns null when the target
+ * is unreachable, else { count, out, range, skill }.
+ * Packet construction is unchanged from the old send functions.
+ */
+function getAttackPlan(target) {
 	const player = getPlayer();
+	if (!player || !target) {
+		return null;
+	}
+	const skill = useSkillMode();
+	const range = getCombatRange();
 	const out = [];
-	const count = PathFinding.search(
-		player.position[0] | 0, player.position[1] | 0,
-		target.position[0] | 0, target.position[1] | 0,
-		player.attack_range + 1,
-		out
-	);
-
+	let count;
+	if (skill) {
+		count = PathFinding.search(
+			player.position[0] | 0, player.position[1] | 0,
+			target.position[0] | 0, target.position[1] | 0,
+			range,
+			out,
+			Altitude.TYPE.WALKABLE
+		);
+	} else {
+		count = PathFinding.search(
+			player.position[0] | 0, player.position[1] | 0,
+			target.position[0] | 0, target.position[1] | 0,
+			range,
+			out
+		);
+	}
 	if (!count) {
-		return false;
+		return null;
 	}
+	return { count: count, out: out, range: range, skill: skill };
+}
 
-	if (player.isOverWeight) {
-		ChatBox.addText(DB.getMessage(243), ChatBox.TYPE.ERROR, ChatBox.FILTER.PUBLIC_LOG);
-		return false;
+function sendChangeDirection() {
+	const player = getPlayer();
+	if (!player) {
+		return;
 	}
-
-	player.lookTo(target.position[0], target.position[1]);
-
 	let pkt;
 	if (PACKETVER.value >= 20180307) {
 		pkt = new PACKET.CZ.CHANGE_DIRECTION2();
@@ -693,7 +909,48 @@ function sendNormalAttack(target) {
 	pkt.headDir = player.headDir;
 	pkt.dir = player.direction;
 	Network.sendPacket(pkt);
+}
 
+/**
+ * Fire once at a target already in range (plan.count < 2).
+ * Normal attack is server-maintained afterwards; attack skills are
+ * one-shot and re-fired by the combat beat.
+ */
+function fireAttackDirect(target) {
+	const player = getPlayer();
+	if (!player || !target) {
+		return false;
+	}
+	if (player.amotionTick && player.amotionTick > Renderer.tick) {
+		return false;
+	}
+	if (Session.moveAction) {
+		return false;
+	}
+	if (useSkillMode()) {
+		const skillId = Prefs.skillId;
+		const level = Prefs.skillLevel || 1;
+		let pkt;
+		if (PACKETVER.value >= 20180307) {
+			pkt = new PACKET.CZ.USE_SKILL2();
+		} else {
+			pkt = new PACKET.CZ.USE_SKILL();
+		}
+		pkt.SKID = skillId;
+		pkt.selectedLevel = level;
+		pkt.targetID = target.GID;
+		Network.sendPacket(pkt);
+		_skillLastFire = Renderer.tick;
+		enterCasting(_state, skillId);
+		return true;
+	}
+	if (player.isOverWeight) {
+		ChatBox.addText(DB.getMessage(243), ChatBox.TYPE.ERROR, ChatBox.FILTER.PUBLIC_LOG);
+		return false;
+	}
+	player.lookTo(target.position[0], target.position[1]);
+	sendChangeDirection();
+	let pkt;
 	if (PACKETVER.value >= 20180307) {
 		pkt = new PACKET.CZ.REQUEST_ACT2();
 	} else {
@@ -701,85 +958,143 @@ function sendNormalAttack(target) {
 	}
 	pkt.action = 7;
 	pkt.targetGID = target.GID;
-
-	if (count < 2) {
-		Network.sendPacket(pkt);
-		return true;
-	}
-
-	setMoveAction(pkt);
-
-	if (PACKETVER.value >= 20180307) {
-		pkt = new PACKET.CZ.REQUEST_MOVE2();
-	} else {
-		pkt = new PACKET.CZ.REQUEST_MOVE();
-	}
-	pkt.dest[0] = out[(count - 1) * 2 + 0];
-	pkt.dest[1] = out[(count - 1) * 2 + 1];
 	Network.sendPacket(pkt);
 	return true;
 }
 
-function sendSkillAttack(target) {
+/**
+ * Start (or restart) walking toward the target; the stashed action packet
+ * is auto-sent by MapEngine onWalkEnd on arrival.
+ */
+function sendChaseMove(target, plan) {
 	const player = getPlayer();
-	const skillId = Prefs.skillId;
-	const level = Prefs.skillLevel || 1;
-
-	if (player.amotionTick && player.amotionTick > Renderer.tick) {
+	if (!player || !target || !plan) {
 		return false;
 	}
-	if (Session.moveAction) {
-		return false;
-	}
-
-	const skill = SkillList.getUI() ? SkillList.getUI().getSkillById(skillId) : null;
-	let range;
-	if (skill) {
-		range = skill.attackRange + 1;
-	} else if (SkillInfo[skillId]) {
-		range = SkillInfo[skillId].AttackRange[level - 1] + 1;
-	} else {
-		range = player.attack_range + 1;
-	}
-
-	const out = [];
-	const count = PathFinding.search(
-		player.position[0] | 0, player.position[1] | 0,
-		target.position[0] | 0, target.position[1] | 0,
-		range,
-		out,
-		Altitude.TYPE.WALKABLE
-	);
-
-	if (!count) {
-		return false;
-	}
-
 	let pkt;
-	if (PACKETVER.value >= 20180307) {
-		pkt = new PACKET.CZ.USE_SKILL2();
+	if (plan.skill) {
+		const level = Prefs.skillLevel || 1;
+		if (PACKETVER.value >= 20180307) {
+			pkt = new PACKET.CZ.USE_SKILL2();
+		} else {
+			pkt = new PACKET.CZ.USE_SKILL();
+		}
+		pkt.SKID = Prefs.skillId;
+		pkt.selectedLevel = level;
+		pkt.targetID = target.GID;
 	} else {
-		pkt = new PACKET.CZ.USE_SKILL();
+		if (player.isOverWeight) {
+			ChatBox.addText(DB.getMessage(243), ChatBox.TYPE.ERROR, ChatBox.FILTER.PUBLIC_LOG);
+			return false;
+		}
+		player.lookTo(target.position[0], target.position[1]);
+		sendChangeDirection();
+		if (PACKETVER.value >= 20180307) {
+			pkt = new PACKET.CZ.REQUEST_ACT2();
+		} else {
+			pkt = new PACKET.CZ.REQUEST_ACT();
+		}
+		pkt.action = 7;
+		pkt.targetGID = target.GID;
 	}
-	pkt.SKID = skillId;
-	pkt.selectedLevel = level;
-	pkt.targetID = target.GID;
-
-	if (count < 2) {
-		Network.sendPacket(pkt);
-		return true;
-	}
-
 	setMoveAction(pkt);
 	if (PACKETVER.value >= 20180307) {
 		pkt = new PACKET.CZ.REQUEST_MOVE2();
 	} else {
 		pkt = new PACKET.CZ.REQUEST_MOVE();
 	}
-	pkt.dest[0] = out[(count - 1) * 2 + 0];
-	pkt.dest[1] = out[(count - 1) * 2 + 1];
+	pkt.dest[0] = plan.out[(plan.count - 1) * 2 + 0];
+	pkt.dest[1] = plan.out[(plan.count - 1) * 2 + 1];
 	Network.sendPacket(pkt);
+	_statePos = [Math.floor(target.position[0]), Math.floor(target.position[1])];
 	return true;
+}
+
+/**
+ * Resolve the bound target GID to a live entity. Retaliation override wins
+ * and rebinds. Returns the entity or null (dead/gone/invalid).
+ */
+function resolveBoundTarget(now) {
+	const player = getPlayer();
+	if (!player || _stateGID === null) {
+		return null;
+	}
+	const retaliation = getRetaliationTarget(player.position[0], player.position[1]);
+	if (retaliation) {
+		if (retaliation.GID !== _stateGID) {
+			_stateGID = retaliation.GID;
+			_statePos = null;
+			_planFailCount = 0;
+		}
+		return retaliation;
+	}
+	let entity = null;
+	try {
+		entity = EntityManager.get(_stateGID);
+	} catch (_e) {
+		entity = null;
+	}
+	if (!isMobEntity(entity) || entity.action === entity.ACTION.DIE || entity.remove_tick !== 0) {
+		return null;
+	}
+	if (entity.isVisible && !entity.isVisible()) {
+		return null;
+	}
+	return entity;
+}
+
+function boundTargetGoneDead() {
+	if (_stateGID === null) {
+		return false;
+	}
+	let entity = null;
+	try {
+		entity = EntityManager.get(_stateGID);
+	} catch (_e) {
+		entity = null;
+	}
+	return !isMobEntity(entity) || entity.action === entity.ACTION.DIE || entity.remove_tick !== 0;
+}
+
+/**
+ * Chase-only gates (range / lock-center / target filter). Combat keeps the
+ * old stickiness: once engaged, only death/gone/invisible/unreachable ends it.
+ */
+function passesChaseGates(entity) {
+	const player = getPlayer();
+	if (!player || !entity) {
+		return false;
+	}
+	const dx = entity.position[0] - player.position[0];
+	const dy = entity.position[1] - player.position[1];
+	if (dx * dx + dy * dy > Prefs.range * Prefs.range) {
+		return false;
+	}
+	if (Prefs.lockCenter) {
+		const maxDistSq = Prefs.maxDistance * Prefs.maxDistance;
+		const cdx = entity.position[0] - Prefs.centerX;
+		const cdy = entity.position[1] - Prefs.centerY;
+		if (cdx * cdx + cdy * cdy > maxDistSq) {
+			return false;
+		}
+	}
+	const filter = getActiveTargetFilter();
+	if (filter && _retaliateGID !== entity.GID) {
+		const job = (typeof entity._job === 'number') ? entity._job : entity.job;
+		if (filter.indexOf(job) === -1) {
+			return false;
+		}
+	}
+	return true;
+}
+
+function targetMovedCells(entity) {
+	if (!_statePos || !entity) {
+		return 0;
+	}
+	const dx = Math.floor(entity.position[0]) - _statePos[0];
+	const dy = Math.floor(entity.position[1]) - _statePos[1];
+	return Math.max(Math.abs(dx), Math.abs(dy));
 }
 
 function sendLoot(item) {
@@ -1202,6 +1517,252 @@ function clearStaleMoveAction(now) {
 	}
 }
 
+/**
+ * Shared upkeep for idle/chase/combat: potions first, then one buff at most.
+ * Skill sends enter the casting satellite state atomically.
+ */
+function upkeep(now) {
+	tryUsePotion();
+	tryKeepBuffs(now);
+}
+
+function updateIdle(now) {
+	upkeep(now);
+	if (_state !== ST_IDLE) {
+		// Upkeep cast a skill: satellite state took over.
+		return;
+	}
+
+	// Under-attack policy (count escape wins, retaliation overrides target)
+	if (handleAttacked(now)) {
+		setState(ST_IDLE, now);
+		return;
+	}
+
+	// Retaliation: jump straight onto the attacker.
+	if (_retaliateGID !== null) {
+		const player = getPlayer();
+		const target = player ? getRetaliationTarget(player.position[0], player.position[1]) : null;
+		if (target) {
+			_stateGID = target.GID;
+			_statePos = null;
+			_planFailCount = 0;
+			_lastTargetSeenTick = now;
+			_roamDest = null;
+			setState(ST_CHASE, now);
+			return;
+		}
+	}
+
+	// Loot only from idle: never interrupt an ongoing fight over drops.
+	if (Prefs.loot) {
+		const loot = findLoot();
+		if (loot) {
+			const player = getPlayer();
+			const d = vec2.distance(player.position, loot.position);
+			if (d <= 2 || d <= Prefs.range) {
+				_stateGID = loot.GID;
+				_lootLastSend = 0;
+				setState(ST_LOOT, now);
+				return;
+			}
+		}
+	}
+
+	const target = findTarget();
+	if (!target) {
+		tryTeleport(now);
+		tryRoam();
+		return;
+	}
+
+	// Found target: refresh no-target timer, cancel roam state and chase.
+	_lastTargetSeenTick = now;
+	_roamDest = null;
+	_stateGID = target.GID;
+	_statePos = null;
+	_planFailCount = 0;
+	setState(ST_CHASE, now);
+}
+
+function updateChase(now) {
+	// Player took the wheel manually: hand control back.
+	if (foreignMoveActive()) {
+		setState(ST_IDLE, now);
+		return;
+	}
+
+	upkeep(now);
+	if (_state !== ST_CHASE) {
+		// Upkeep cast a skill: satellite state took over.
+		return;
+	}
+
+	if (handleAttacked(now)) {
+		setState(ST_IDLE, now);
+		return;
+	}
+
+	const target = resolveBoundTarget(now);
+	if (!target || !passesChaseGates(target)) {
+		setState(ST_IDLE, now);
+		return;
+	}
+	_lastTargetSeenTick = now;
+	_roamDest = null;
+
+	// Target outran the last move order: cancel and re-issue.
+	if (ownMovePending() && targetMovedCells(target) > CHASE_REPATH_CELLS) {
+		dropMoveAction();
+	}
+
+	const plan = getAttackPlan(target);
+	if (!plan) {
+		if (++_planFailCount > 15) {
+			setState(ST_IDLE, now);
+		}
+		return;
+	}
+	if (plan.count < 2) {
+		if (fireAttackDirect(target)) {
+			_planFailCount = 0;
+			_combatDisrupted = false;
+			setState(ST_COMBAT, now);
+		}
+		return;
+	}
+	// Out of reach: walk, but only when nothing is already in flight
+	// (arrival auto-fires the stashed packet via MapEngine onWalkEnd).
+	if (!ownMovePending() && !isBusy()) {
+		if (sendChaseMove(target, plan)) {
+			_planFailCount = 0;
+		}
+	}
+}
+
+function updateCombat(now) {
+	if (foreignMoveActive()) {
+		setState(ST_IDLE, now);
+		return;
+	}
+
+	upkeep(now);
+	if (_state !== ST_COMBAT) {
+		// Upkeep cast a skill: satellite state took over.
+		return;
+	}
+
+	if (handleAttacked(now)) {
+		setState(ST_IDLE, now);
+		return;
+	}
+
+	// Retaliation switched targets: rechase the new one.
+	if (_retaliateGID !== null && _retaliateGID !== _stateGID) {
+		const player = getPlayer();
+		const target = player ? getRetaliationTarget(player.position[0], player.position[1]) : null;
+		if (target) {
+			_stateGID = target.GID;
+			_statePos = null;
+			_planFailCount = 0;
+			setState(ST_CHASE, now);
+			return;
+		}
+	}
+
+	const target = resolveBoundTarget(now);
+	if (!target) {
+		// Bound target died or vanished mid-fight: count the kill.
+		if (boundTargetGoneDead()) {
+			_killCount++;
+		}
+		setState(ST_IDLE, now);
+		return;
+	}
+	_lastTargetSeenTick = now;
+	_roamDest = null;
+
+	const plan = getAttackPlan(target);
+	if (!plan) {
+		if (++_planFailCount > 15) {
+			setState(ST_IDLE, now);
+		}
+		return;
+	}
+	if (plan.count >= 2) {
+		// Drifted out of reach: rechase (stays sticky, no range re-gate).
+		setState(ST_CHASE, now);
+		return;
+	}
+
+	if (!useSkillMode()) {
+		// Normal attack is server-maintained: only refire when our own cast
+		// broke it, or the safety net trips (server stopped silently).
+		if (_combatDisrupted) {
+			if (fireAttackDirect(target)) {
+				_combatDisrupted = false;
+				_planFailCount = 0;
+			}
+			return;
+		}
+		const player = getPlayer();
+		const idleAttacker = !player.amotionTick || player.amotionTick <= now;
+		if (now - _stateTick > COMBAT_REATTACK_MS && idleAttacker && !ownMovePending()) {
+			if (fireAttackDirect(target)) {
+				_planFailCount = 0;
+				// Re-arm the safety net from this refire.
+				_stateTick = now;
+			}
+		}
+		return;
+	}
+
+	// Attack-skill mode: one-shot casts on our own beat. Overpace sends
+	// are silently dropped server-side (canact_tick gate).
+	const learned = _skillCastLen[Prefs.skillId] || 0;
+	const floor = Math.max(SKILL_REFIRE_FLOOR_MS, learned + SKILL_REFIRE_CAST_MARGIN_MS);
+	if (!isBusy() && now - _skillLastFire >= floor) {
+		if (fireAttackDirect(target)) {
+			_planFailCount = 0;
+		}
+	}
+}
+
+function updateLoot(now) {
+	if (foreignMoveActive()) {
+		setState(ST_IDLE, now);
+		return;
+	}
+
+	if (handleAttacked(now)) {
+		setState(ST_IDLE, now);
+		return;
+	}
+
+	let item = null;
+	try {
+		item = EntityManager.get(_stateGID);
+	} catch (_e) {
+		item = null;
+	}
+	if (!item || item.objecttype !== Entity.TYPE_ITEM || item.remove_tick !== 0) {
+		// Picked up (or gone): back to business.
+		setState(ST_IDLE, now);
+		return;
+	}
+	if (now - _stateTick > LOOT_TIMEOUT_MS) {
+		setState(ST_IDLE, now);
+		return;
+	}
+	// Send once; resend only when nothing is in flight (watchdog drop or
+	// fail-ack) and enough time passed.
+	if (!ownMovePending() && !isBusy() && now - _lootLastSend > LOOT_RESEND_MS) {
+		if (sendLoot(item)) {
+			_lootLastSend = now;
+		}
+	}
+}
+
 function tickImpl() {
 	if (!_enabled || !Prefs.enabled) {
 		return;
@@ -1212,12 +1773,10 @@ function tickImpl() {
 		if (p && (p.action === p.ACTION.DIE || (p.life && p.life.hp <= 0))) {
 			handleDeath();
 		}
-		schedule();
 		return;
 	}
 
 	if (isOverWeight()) {
-		schedule();
 		return;
 	}
 
@@ -1226,74 +1785,60 @@ function tickImpl() {
 	// Watchdog: clear our own chase/pickup move when arrival never comes
 	clearStaleMoveAction(now);
 
-	// Sit-to-recover (independent card): resting blocks potions/buffs/loot/combat.
-	const restState = handleSitRest();
-	if (restState === 'resting') {
-		// Emergency escape still wins while resting (stand + teleport).
-		const cfg = getSitRecovery();
-		if (cfg.enabled) {
-			const countThreshold = typeof Prefs.attackedTeleportCount === 'number' ? Prefs.attackedTeleportCount : 0;
-			if (countThreshold > 0 && getMobAttackers(now).length > countThreshold) {
-				if (tryTeleportSlots()) {
-					_lastTargetSeenTick = now;
-					_retaliateGID = null;
-				}
-			}
-		}
-		schedule();
+	// Sit-to-recover preemption (real state, independent from recoveryRules).
+	if (_state !== ST_RESTING && _state !== ST_CASTING && maybeEnterResting(now)) {
 		return;
 	}
 
-	// Potion check each tick (fast)
-	tryUsePotion();
-
-	// Keep buffs up (one cast per tick at most, never blocks combat)
-	tryKeepBuffs(now);
-
-	// Under-attack policy (count escape wins, retaliation overrides target)
-	if (handleAttacked(now)) {
-		schedule();
-		return;
-	}
-
-	// Loot has priority if close and no combat
-	if (Prefs.loot && now - _lastLootTick > 300) {
-		const loot = findLoot();
-		if (loot) {
-			const player = getPlayer();
-			const d = vec2.distance(player.position, loot.position);
-			if (d <= 2 || d <= Prefs.range) {
-				if (sendLoot(loot)) {
-					_lastLootTick = now;
-					schedule();
-					return;
-				}
-			}
+	// A cast bar we didn't send (arrival-fired skill, manual cast, NPC
+	// progress bar): track it in the satellite state all the same.
+	// NOTE: Session.Entity.lastSKID is set by any nearby cast ack, so the
+	// skill id here is best-effort diagnostics only; delay learning for a
+	// wrong id errs toward slower pacing, never toward spam.
+	if (_state !== ST_CASTING && _state !== ST_RESTING) {
+		const p = getPlayer();
+		const cast = p && p.cast;
+		if (cast && cast.display && cast.delay > 0) {
+			enterCasting(_state, (Session.Entity && Session.Entity.lastSKID) || 0);
 		}
 	}
 
-	// Attack throttle
-	if (now - _lastAttackTick < Prefs.attackInterval) {
-		schedule();
-		return;
+	switch (_state) {
+		case ST_CASTING:
+			updateCasting(now);
+			if (_state === ST_CASTING) {
+				return;
+			}
+			// Fell through on exit: run the resumed state this same tick.
+			tickImplState(now);
+			return;
+		default:
+			tickImplState(now);
+			return;
 	}
+}
 
-	const target = findTarget();
-	if (!target) {
-		tryTeleport(now);
-		tryRoam();
-		schedule();
-		return;
+function tickImplState(now) {
+	switch (_state) {
+		case ST_CHASE:
+			updateChase(now);
+			return;
+		case ST_COMBAT:
+			updateCombat(now);
+			return;
+		case ST_LOOT:
+			updateLoot(now);
+			return;
+		case ST_RESTING:
+			updateResting(now);
+			return;
+		case ST_CASTING:
+			updateCasting(now);
+			return;
+		default:
+			updateIdle(now);
+			return;
 	}
-
-	// Found target: refresh no-target timer, cancel roam state and attack
-	_lastTargetSeenTick = now;
-	_roamDest = null;
-	if (sendAttack(target)) {
-		_lastAttackTick = now;
-	}
-
-	schedule();
 }
 
 /**
@@ -1318,7 +1863,8 @@ function schedule() {
 	if (!_enabled || !Prefs.enabled) {
 		return;
 	}
-	_timer = Events.setTimeout(tick, Prefs.attackInterval);
+	// Fixed cadence for every state; pacing lives in the state logic.
+	_timer = Events.setTimeout(tick, TICK_MS);
 }
 
 function start() {
@@ -1336,8 +1882,6 @@ function start() {
 		Prefs.save();
 	}
 
-	_lastAttackTick = 0;
-	_lastLootTick = 0;
 	_lastRoamTick = 0;
 	_lastTargetSeenTick = Renderer.tick;
 	_moveActionPkt = null;
@@ -1345,7 +1889,16 @@ function start() {
 	_moveActionPos = null;
 	_retaliateGID = null;
 	_roamDest = null;
-	_resting = false;
+	_state = ST_IDLE;
+	_stateTick = Renderer.tick;
+	_stateGID = null;
+	_statePos = null;
+	_planFailCount = 0;
+	_lootLastSend = 0;
+	_skillLastFire = 0;
+	_combatDisrupted = false;
+	_pendingCast = null;
+	_castLastInfo = '-';
 	// Fresh round: clear buff re-cast gates so enabling always tops up
 	// actually-missing buffs (mapped skills are still skipped via live
 	// StatusIcons check when genuinely active).
@@ -1372,7 +1925,11 @@ function stop() {
 	_lastRoamTick = 0;
 	_retaliateGID = null;
 	_roamDest = null;
-	_resting = false;
+	_state = ST_IDLE;
+	_stateGID = null;
+	_statePos = null;
+	_pendingCast = null;
+	_combatDisrupted = false;
 	sendStandUp();
 	Session.moveAction = null;
 	_moveActionPkt = null;
@@ -1429,18 +1986,21 @@ function getStats() {
 		killCount: _killCount,
 		range: Prefs.range,
 		tickCount: _tickCount,
+		tickMs: TICK_MS,
 		timerPending: _timer !== null,
+		state: _state,
+		stateAgeMs: now - _stateTick,
+		stateGID: _stateGID,
+		cast: _castLastInfo,
 		moveAction: !!Session.moveAction,
 		moveActionOurs: !!(_moveActionPkt && Session.moveAction === _moveActionPkt),
 		moveActionAgeMs: (_moveActionPkt && Session.moveAction === _moveActionPkt) ? now - _moveActionTick : 0,
 		amotionRemainingMs: player && player.amotionTick ? Math.max(0, player.amotionTick - now) : 0,
 		hasTarget: hasTarget,
-		lastAttackAgoMs: now - _lastAttackTick,
 		buffEnabled: !!Prefs.buffEnabled,
 		attackedCount: getMobAttackers(now).length,
 		retaliateGID: _retaliateGID,
 		sitting: isSitting(),
-		resting: _resting,
 		sitRecovery: `enabled=${sitCfg.enabled} sit=${sitCfg.sitTarget}<=${sitCfg.sitThreshold}% stand=${sitCfg.standTarget}>=${sitCfg.standThreshold}% hp=${Math.round(getHpPercent())}% sp=${Math.round(getSpPercent())}%`,
 		buffSlots: getBuffSlotDiagnostics(now)
 	};
@@ -1492,6 +2052,7 @@ export default {
 	toggle,
 	isEnabled,
 	setEnabled,
+	getState,
 	getStats,
 	tick,
 	// expose for UI/testing

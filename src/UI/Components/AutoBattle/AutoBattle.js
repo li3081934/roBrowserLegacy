@@ -64,18 +64,6 @@ AutoBattle.init = function init() {
 		});
 	}
 
-	// Interval
-	const intervalEl = root.querySelector('#ab_interval');
-	if (intervalEl) {
-		intervalEl.addEventListener('change', () => {
-			let v = parseInt(intervalEl.value, 10);
-			if (isNaN(v)) v = 500;
-			v = Math.max(200, Math.min(5000, v));
-			Prefs.attackInterval = v;
-			Prefs.save();
-		});
-	}
-
 	// Use skill
 	const useSkillEl = root.querySelector('#ab_useSkill');
 	if (useSkillEl) {
@@ -830,7 +818,15 @@ AutoBattle.init = function init() {
 		if (!status || !cb) return;
 		const on = AutoBattleEngine.isEnabled();
 		cb.checked = on;
-		status.textContent = on ? 'ON' : 'OFF';
+		let label = on ? 'ON' : 'OFF';
+		if (on && AutoBattleEngine.getState) {
+			try {
+				label += ' · ' + AutoBattleEngine.getState();
+			} catch (_e) {
+				// keep plain ON/OFF
+			}
+		}
+		status.textContent = label;
 		status.className = 'status ' + (on ? 'on' : 'off');
 	}
 
@@ -842,8 +838,6 @@ AutoBattle.init = function init() {
 	function syncUIFromPrefs() {
 		const r = root.querySelector('#ab_range');
 		if (r) r.value = Prefs.range;
-		const iv = root.querySelector('#ab_interval');
-		if (iv) iv.value = Prefs.attackInterval;
 		const us = root.querySelector('#ab_useSkill');
 		if (us) us.checked = !!Prefs.useSkill;
 		const slv = root.querySelector('#ab_skillLv');
@@ -943,9 +937,23 @@ AutoBattle.onAppend = function onAppend() {
 		host.style.top = '120px';
 		host.style.left = '400px';
 	}
+
+	// Live state readout (ON · idle/chase/...) while the panel is open.
+	if (this._statusTimer) {
+		clearInterval(this._statusTimer);
+	}
+	this._statusTimer = setInterval(() => {
+		if (this._updateStatus) {
+			this._updateStatus();
+		}
+	}, 500);
 };
 
 AutoBattle.onRemove = function onRemove() {
+	if (this._statusTimer) {
+		clearInterval(this._statusTimer);
+		this._statusTimer = null;
+	}
 	Prefs.save();
 };
 

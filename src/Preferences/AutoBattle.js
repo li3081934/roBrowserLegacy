@@ -13,6 +13,8 @@ export default Preferences.get(
 	{
 		enabled: false,
 		range: 14,
+		// Deprecated: engine tick is fixed at 200ms (TICK_MS); skill pacing
+		// uses its own floor. Kept for stored-settings compatibility.
 		attackInterval: 500,
 		useSkill: false,
 		skillId: 0,
