@@ -639,10 +639,20 @@ function onConnectionRefused(pkt) {
  * @param {object} pkt - PACKET.ZC.NPCACK_MAPMOVE
  */
 function onMapChange(pkt) {
-	// Auto-battle never survives a map transition: stop it on first entry
-	// and on every subsequent map change (Prefs.enabled=false persists, so
+	// Auto-battle never survives a REAL map transition: stop it on first
+	// entry and on cross-map changes (Prefs.enabled=false persists, so
 	// the delayed auto-start in AutoBattleEngine.init() stays off too).
-	AutoBattleEngine.stop();
+	// Same-map warps (fly wing / teleport skill, which the server also
+	// reports via NPCACK_MAPMOVE) must NOT stop it: escape teleports are
+	// part of auto-battle itself. Compare like MapRenderer.setMap does
+	// (instance prefixes + extension stripped).
+	const normMap = name => (name || '')
+		.replace(/^(\d{3})(\d@)/, '$2')
+		.replace(/^\d{3}#/, '')
+		.replace(/\.[^.]*$/, '');
+	if (normMap(MapRenderer.currentMap) !== normMap(pkt.mapName)) {
+		AutoBattleEngine.stop();
+	}
 	MapRenderer.onLoad = () => {
 		Session.Entity.set({
 			PosDir: [pkt.xPos, pkt.yPos, 0],
