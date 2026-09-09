@@ -72,8 +72,9 @@ const CHASE_REPATH_CELLS = 3;
 const COMBAT_REATTACK_MS = 5000;
 // Combat (attack skill): re-fire no earlier than this after the last fire,
 // extended by the observed cast length (client has no Delay/Cooldown data).
-const SKILL_REFIRE_FLOOR_MS = 500;
+const SKILL_REFIRE_FLOOR_MS = 150; // just above server min (100 + SECURITY 100)
 const SKILL_REFIRE_CAST_MARGIN_MS = 200;
+let _skillBeatTimer = null; // exact-time combat-skill refire, decoupled from the 200ms tick grid
 let _skillLastFire = 0;
 // Set when our own skill cast interrupted continuous attack: refire once.
 let _combatDisrupted = false;
@@ -219,6 +220,53 @@ function getState() {
 
 function useSkillMode() {
 	return !!(Prefs.useSkill && Prefs.skillId);
+}
+
+function skillRefireFloor(skillId) {
+	const learned = _skillCastLen[skillId] || 0;
+	return Math.max(SKILL_REFIRE_FLOOR_MS, learned + SKILL_REFIRE_CAST_MARGIN_MS);
+}
+
+function armSkillBeat(ms) {
+	if (_skillBeatTimer !== null) {
+		Events.clearTimeout(_skillBeatTimer);
+		_skillBeatTimer = null;
+	}
+	if (!_enabled || !Prefs.enabled) {
+		return;
+	}
+	_skillBeatTimer = Events.setTimeout(onSkillBeat, Math.max(50, ms));
+}
+
+/**
+ * Exact-time combat-skill refire, decoupled from the 200ms monitoring tick
+ * so chaining gaps track the floor instead of the tick grid. Any state
+ * change in between makes this a no-op; the tick owns all transitions.
+ */
+function onSkillBeat() {
+	_skillBeatTimer = null;
+	if (!_enabled || !Prefs.enabled) {
+		return;
+	}
+	if (_state !== ST_COMBAT || !useSkillMode()) {
+		return;
+	}
+	if (!isPlayerValid() || isOverWeight()) {
+		return;
+	}
+	const target = resolveBoundTarget(Renderer.tick);
+	if (!target) {
+		return;
+	}
+	const plan = getAttackPlan(target);
+	if (!plan || plan.count >= 2) {
+		return;
+	}
+	if (isBusy()) {
+		armSkillBeat(SKILL_REFIRE_FLOOR_MS);
+		return;
+	}
+	fireAttackDirect(target); // re-arms the beat itself
 }
 
 function ownMovePending() {
@@ -930,6 +978,15 @@ function fireAttackDirect(target) {
 	if (useSkillMode()) {
 		const skillId = Prefs.skillId;
 		const level = Prefs.skillLevel || 1;
+		// SP pre-check (mirrors useSkillOnSelf): hold the beat while broke
+		// instead of spamming doomed sends; regen resumes it automatically.
+		const info = SkillInfo[skillId];
+		if (info && Array.isArray(info.SpAmount) && info.SpAmount.length) {
+			const cost = info.SpAmount[Math.min(level, info.SpAmount.length) - 1];
+			if (typeof cost === 'number' && player.life && typeof player.life.sp === 'number' && player.life.sp < cost) {
+				return false;
+			}
+		}
 		let pkt;
 		if (PACKETVER.value >= 20180307) {
 			pkt = new PACKET.CZ.USE_SKILL2();
@@ -941,7 +998,14 @@ function fireAttackDirect(target) {
 		pkt.targetID = target.GID;
 		Network.sendPacket(pkt);
 		_skillLastFire = Renderer.tick;
-		enterCasting(_state, skillId);
+		// Enter the satellite state only when a cast bar is actually expected
+		// (learned before). Instant sends skip it: a dud then costs exactly
+		// one dropped packet instead of an 800ms combat freeze, while a real
+		// bar is still picked up by the passive detector (which learns).
+		if ((_skillCastLen[skillId] || 0) > 0) {
+			enterCasting(_state, skillId);
+		}
+		armSkillBeat(skillRefireFloor(skillId));
 		return true;
 	}
 	if (player.isOverWeight) {
@@ -1765,10 +1829,10 @@ function updateCombat(now) {
 		return;
 	}
 
-	// Attack-skill mode: one-shot casts on our own beat. Overpace sends
-	// are silently dropped server-side (canact_tick gate).
-	const learned = _skillCastLen[Prefs.skillId] || 0;
-	const floor = Math.max(SKILL_REFIRE_FLOOR_MS, learned + SKILL_REFIRE_CAST_MARGIN_MS);
+	// Attack-skill mode: one-shot casts on our own beat (exact timer first,
+	// tick check as fallback). Overpace sends are silently dropped
+	// server-side (canact_tick gate).
+	const floor = skillRefireFloor(Prefs.skillId);
 	if (!isBusy() && now - _skillLastFire >= floor) {
 		if (fireAttackDirect(target)) {
 			_planFailCount = 0;
@@ -1944,6 +2008,7 @@ function start() {
 	_planFailCount = 0;
 	_lootLastSend = 0;
 	_skillLastFire = 0;
+	_skillBeatTimer = null;
 	_combatDisrupted = false;
 	_pendingCast = null;
 	_castLastInfo = '-';
@@ -1969,6 +2034,10 @@ function stop() {
 	if (_timer !== null) {
 		Events.clearTimeout(_timer);
 		_timer = null;
+	}
+	if (_skillBeatTimer !== null) {
+		Events.clearTimeout(_skillBeatTimer);
+		_skillBeatTimer = null;
 	}
 
 	_lastRoamTick = 0;
@@ -2040,6 +2109,7 @@ function getStats() {
 		state: _state,
 		stateAgeMs: now - _stateTick,
 		stateGID: _stateGID,
+		skillBeat: _skillBeatTimer !== null,
 		cast: _castLastInfo,
 		moveAction: !!Session.moveAction,
 		moveActionOurs: !!(_moveActionPkt && Session.moveAction === _moveActionPkt),
