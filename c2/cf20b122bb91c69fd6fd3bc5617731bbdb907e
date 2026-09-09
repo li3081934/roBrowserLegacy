@@ -1,0 +1,20 @@
+src/Engine/MapEngine.js
+  s_6e16c62fdc40da::t_4ad4e809608871 647-653
+  s_6e16c62fdc40da::t_c3f6bef87c8c10 642-643,645-646,654-655
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "c2cf20b122bb91c69fd6fd3bc5617731bbdb907e",
+  "prompts": {},
+  "sessions": {
+    "s_6e16c62fdc40da": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7fb77fb8ffeiFUYDrH2bU347S",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
