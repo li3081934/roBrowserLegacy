@@ -333,6 +333,9 @@ function exitCasting(result, now) {
 	const skillId = _pendingCast && _pendingCast.skillId;
 	_castLastInfo = `${skillId || '?'}:${result}`;
 	_pendingCast = null;
+	// Any own cast (landed or not) leaves server canact hot past what we
+	// can see: the next skill send waits out the grace in useSkillOnSelf.
+	_lastOwnCastEndTick = now;
 	// Our own cast stopped continuous attack: refire once when resuming
 	// normal-attack combat (skill-mode combat re-fires on its own beat).
 	if (ret === ST_COMBAT && !useSkillMode()) {
@@ -849,6 +852,12 @@ function useSkillOnSelf(skillId, level) {
 		if (elapsed >= 0 && elapsed < cast.delay) {
 			return false;
 		}
+	}
+	// Post-cast grace: our own previous cast leaves server canact hot past
+	// its visible end (e.g. IncAgi's 400ms aftercast, invisible to us). The
+	// next skill sent inside it duds deterministically, so hold briefly.
+	if (Renderer.tick - _lastOwnCastEndTick < OWN_CAST_GRACE_MS) {
+		return false;
 	}
 	// SP affordability pre-check: never send a skill we can't afford.
 	// A server-rejected send would otherwise poison the re-cast gate
@@ -1477,12 +1486,21 @@ const BUFF_RECAST_MS = 60000; // unverifiable buffs only (unmapped skills, items
 const BUFF_MAPPED_RECAST_MS = 8000; // mapped skills: icon is authoritative, gate only bounds dud retries
 
 const _buffLastCast = [0, 0, 0, 0, 0];
+// Per-cycle gate jitter (ms), re-rolled on each send: breaks exact phase
+// resonance between fixed-interval retries and the server attack rhythm.
+const _buffGateJitter = [0, 0, 0, 0, 0];
+// Consecutive dud sends per slot (sent, icon still off). Landed icons reset.
+const _buffDud = [0, 0, 0, 0, 0];
 
 // Last tick a buff *skill* was sent (Renderer.tick). Idle waits for the
 // send to land instead of engaging immediately.
 let _lastBuffSkillSendTick = 0;
 // Grace after a buff send during which idle holds engagement for it to land.
 const BUFF_SETTLE_MS = 2500;
+// Hold after any own cast ends before the next self-skill send: covers
+// invisible server aftercast residue that would dud the retry deterministically.
+const OWN_CAST_GRACE_MS = 600;
+let _lastOwnCastEndTick = 0;
 
 function isStatusIconActive(efst) {
 	// Single source of truth: StatusIcons is fed by Entity's
@@ -1511,13 +1529,17 @@ function isBuffActive(action, slotIndex, now) {
 	// therefore retries in seconds, not minutes. Unverifiable buffs keep
 	// the long gate (it is their only anti-spam: no cast state for items,
 	// no icon for unmapped skills).
-	if (now - (_buffLastCast[slotIndex] || 0) < buffRecastMs(action)) {
+	if (now - (_buffLastCast[slotIndex] || 0) < buffRecastMs(action) + (_buffGateJitter[slotIndex] || 0)) {
 		return true;
 	}
 	if (action.kind === 'skill') {
 		const efst = BUFF_STATUS_MAP[action.SKID];
 		if (typeof efst === 'number') {
-			return isStatusIconActive(efst);
+			const on = isStatusIconActive(efst);
+			if (on) {
+				_buffDud[slotIndex] = 0;
+			}
+			return on;
 		}
 	}
 	return false;
@@ -1540,11 +1562,18 @@ function buffDemandExists(now) {
 	return false;
 }
 
+// Buff skill sends wait for this long after our own attack motion ends:
+// server canact stays hot a bit longer than the visible motion, and sends
+// inside it dud silently. Recovery/teleport intentionally skip this.
+const BUFF_AMOTION_GAP_MS = 250;
+
 function tryKeepBuffs(now) {
 	if (!Prefs.buffEnabled) {
 		return false;
 	}
 	const slots = Array.isArray(Prefs.buffSlots) ? Prefs.buffSlots : [];
+	const player = getPlayer();
+	const amotionEnd = (player && player.amotionTick) || 0;
 	for (let i = 0; i < slots.length; i++) {
 		const action = slots[i];
 		if (!action) {
@@ -1555,9 +1584,18 @@ function tryKeepBuffs(now) {
 		}
 		let ok = false;
 		if (action.kind === 'skill') {
+			if (now - amotionEnd < BUFF_AMOTION_GAP_MS) {
+				// All buff slots share the same attack rhythm: stop here
+				// and retry on a later tick instead of dudding into canact.
+				break;
+			}
 			ok = useSkillOnSelf(action.SKID, action.level);
 			if (ok) {
 				_lastBuffSkillSendTick = now;
+				const efst = BUFF_STATUS_MAP[action.SKID];
+				if (typeof efst === 'number') {
+					_buffDud[i] = isStatusIconActive(efst) ? 0 : (_buffDud[i] || 0) + 1;
+				}
 			}
 		} else {
 			const ui = Inventory.getUI();
@@ -1569,6 +1607,7 @@ function tryKeepBuffs(now) {
 		}
 		if (ok) {
 			_buffLastCast[i] = now;
+			_buffGateJitter[i] = Math.random() * 2000;
 			return true;
 		}
 	}
@@ -2013,6 +2052,11 @@ function start() {
 	_pendingCast = null;
 	_castLastInfo = '-';
 	_lastBuffSkillSendTick = 0;
+	_lastOwnCastEndTick = 0;
+	for (let i = 0; i < _buffDud.length; i++) {
+		_buffDud[i] = 0;
+		_buffGateJitter[i] = 0;
+	}
 	// Fresh round: clear buff re-cast gates so enabling always tops up
 	// actually-missing buffs (mapped skills are still skipped via live
 	// StatusIcons check when genuinely active).
@@ -2117,6 +2161,7 @@ function getStats() {
 		amotionRemainingMs: player && player.amotionTick ? Math.max(0, player.amotionTick - now) : 0,
 		hasTarget: hasTarget,
 		buffEnabled: !!Prefs.buffEnabled,
+		sp: player && player.life ? `${player.life.sp}/${player.life.sp_max}` : '-',
 		attackedCount: getMobAttackers(now).length,
 		retaliateGID: _retaliateGID,
 		sitting: isSitting(),
@@ -2159,7 +2204,7 @@ function getBuffSlotDiagnostics(now) {
 		} catch (_e) {
 			active = 'error';
 		}
-		out.push(`${i}:${describeBuffAction(action)} lastCast=${now - (_buffLastCast[i] || 0)}ms icon=${icon} skip=${active}`);
+		out.push(`${i}:${describeBuffAction(action)} lastCast=${now - (_buffLastCast[i] || 0)}ms icon=${icon} skip=${active} dud=${_buffDud[i] || 0}`);
 	}
 	return out.join(' | ');
 }
