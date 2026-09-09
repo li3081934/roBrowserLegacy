@@ -1,0 +1,28 @@
+src/Engine/MapEngine/AutoBattle.js
+  s_6e16c62fdc40da::t_88b64f2fff0b74 353
+  s_6e16c62fdc40da::t_c36635957b93d7 2217
+  s_6e16c62fdc40da::t_a151714add0817 27
+  s_6e16c62fdc40da::t_8edaee94af8372 315-321,333,342,345-352,354-372
+  s_6e16c62fdc40da::t_d75b613c7295ff 2113-2114
+  s_6e16c62fdc40da::t_4c560966fb4c72 2010
+  s_6e16c62fdc40da::t_bce27956a86d24 892-894
+  s_6e16c62fdc40da::t_4324ccb4f48546 1537-1542,1544-1560
+src/UI/Components/StatusIcons/StatusIcons.js
+  s_6e16c62fdc40da::t_fd4983e2a56262 176-191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "014e107c1ce1f36344387082608304ac564ff0ce",
+  "prompts": {},
+  "sessions": {
+    "s_6e16c62fdc40da": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7fb77fb8ffeiFUYDrH2bU347S",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
