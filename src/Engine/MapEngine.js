@@ -639,6 +639,10 @@ function onConnectionRefused(pkt) {
  * @param {object} pkt - PACKET.ZC.NPCACK_MAPMOVE
  */
 function onMapChange(pkt) {
+	// Auto-battle never survives a map transition: stop it on first entry
+	// and on every subsequent map change (Prefs.enabled=false persists, so
+	// the delayed auto-start in AutoBattleEngine.init() stays off too).
+	AutoBattleEngine.stop();
 	MapRenderer.onLoad = () => {
 		Session.Entity.set({
 			PosDir: [pkt.xPos, pkt.yPos, 0],
