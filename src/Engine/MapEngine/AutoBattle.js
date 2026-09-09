@@ -90,6 +90,105 @@ function getSpPercent() {
 	return (p.life.sp / p.life.sp_max) * 100;
 }
 
+function getSitRecovery() {
+	const def = { enabled: false, sitTarget: 'hp', sitThreshold: 50, standTarget: 'hp', standThreshold: 90 };
+	const s = Prefs.sitRecovery;
+	if (!s || typeof s !== 'object') {
+		return def;
+	}
+	const sitTarget = s.sitTarget === 'sp' ? 'sp' : 'hp';
+	const standTarget = s.standTarget === 'sp' ? 'sp' : 'hp';
+	let sitThreshold = typeof s.sitThreshold === 'number' ? s.sitThreshold : def.sitThreshold;
+	let standThreshold = typeof s.standThreshold === 'number' ? s.standThreshold : def.standThreshold;
+	if (isNaN(sitThreshold)) sitThreshold = def.sitThreshold;
+	if (isNaN(standThreshold)) standThreshold = def.standThreshold;
+	sitThreshold = Math.max(0, Math.min(100, Math.round(sitThreshold)));
+	standThreshold = Math.max(0, Math.min(100, Math.round(standThreshold)));
+	return { enabled: !!s.enabled, sitTarget, sitThreshold, standTarget, standThreshold };
+}
+
+function getSitPercent(target) {
+	return target === 'sp' ? getSpPercent() : getHpPercent();
+}
+
+function isSitting() {
+	const p = getPlayer();
+	return !!(p && p.ACTION && p.action === p.ACTION.SIT);
+}
+
+function sendSitDown() {
+	const player = getPlayer();
+	if (!player || isSitting()) {
+		return isSitting();
+	}
+	if (Session.moveAction) {
+		return false;
+	}
+	if (player.walk && player.walk.total !== 0) {
+		return false;
+	}
+	let pkt;
+	if (PACKETVER.value >= 20180307) {
+		pkt = new PACKET.CZ.REQUEST_ACT2();
+	} else {
+		pkt = new PACKET.CZ.REQUEST_ACT();
+	}
+	pkt.action = 2; // sit down
+	Network.sendPacket(pkt);
+	return true;
+}
+
+function sendStandUp() {
+	const player = getPlayer();
+	if (!player) {
+		return false;
+	}
+	if (!isSitting()) {
+		return true;
+	}
+	let pkt;
+	if (PACKETVER.value >= 20180307) {
+		pkt = new PACKET.CZ.REQUEST_ACT2();
+	} else {
+		pkt = new PACKET.CZ.REQUEST_ACT();
+	}
+	pkt.action = 3; // stand up
+	Network.sendPacket(pkt);
+	return true;
+}
+
+let _resting = false;
+
+/**
+ * Sit-to-recover state machine (independent from recoveryRules).
+ * - not resting + sitVal <= sitThreshold -> start resting (sit, block combat)
+ * - resting + standVal >= standThreshold -> stop resting (stand, resume)
+ * - resting otherwise -> keep sitting, block combat
+ * Returns 'resting' when the tick is consumed, 'stood-up' on release, null otherwise.
+ */
+function handleSitRest() {
+	const cfg = getSitRecovery();
+	if (!cfg.enabled) {
+		_resting = false;
+		return null;
+	}
+	if (_resting) {
+		if (getSitPercent(cfg.standTarget) >= cfg.standThreshold) {
+			_resting = false;
+			sendStandUp();
+			return 'stood-up';
+		}
+		sendSitDown();
+		return 'resting';
+	}
+	if (getSitPercent(cfg.sitTarget) <= cfg.sitThreshold) {
+		_resting = true;
+		sendSitDown();
+		return 'resting';
+	}
+	return null;
+}
+
 function isMobEntity(entity) {
 	return entity && (entity.objecttype === Entity.TYPE_MOB ||
 		entity.objecttype === Entity.TYPE_NPC_ABR ||
@@ -198,7 +297,10 @@ function handleAttacked(now) {
 		return false;
 	}
 
-	// Retaliate: override target until it dies/leaves.
+	// Retaliate: override target until it dies/leaves (stand up first).
+	if (best) {
+		sendStandUp();
+	}
 	_retaliateGID = best ? best.GID : null;
 	return false;
 }
@@ -930,6 +1032,8 @@ function tryTeleportSlots() {
 	if (!slots[0] && !slots[1]) {
 		return false;
 	}
+	// Teleport items/skills require standing (e.g. escaping while sit-resting).
+	sendStandUp();
 	for (let i = 0; i < 2; i++) {
 		if (useTeleportAction(slots[i])) {
 			return true;
@@ -1122,6 +1226,24 @@ function tickImpl() {
 	// Watchdog: clear our own chase/pickup move when arrival never comes
 	clearStaleMoveAction(now);
 
+	// Sit-to-recover (independent card): resting blocks potions/buffs/loot/combat.
+	const restState = handleSitRest();
+	if (restState === 'resting') {
+		// Emergency escape still wins while resting (stand + teleport).
+		const cfg = getSitRecovery();
+		if (cfg.enabled) {
+			const countThreshold = typeof Prefs.attackedTeleportCount === 'number' ? Prefs.attackedTeleportCount : 0;
+			if (countThreshold > 0 && getMobAttackers(now).length > countThreshold) {
+				if (tryTeleportSlots()) {
+					_lastTargetSeenTick = now;
+					_retaliateGID = null;
+				}
+			}
+		}
+		schedule();
+		return;
+	}
+
 	// Potion check each tick (fast)
 	tryUsePotion();
 
@@ -1223,6 +1345,7 @@ function start() {
 	_moveActionPos = null;
 	_retaliateGID = null;
 	_roamDest = null;
+	_resting = false;
 	// Fresh round: clear buff re-cast gates so enabling always tops up
 	// actually-missing buffs (mapped skills are still skipped via live
 	// StatusIcons check when genuinely active).
@@ -1249,6 +1372,8 @@ function stop() {
 	_lastRoamTick = 0;
 	_retaliateGID = null;
 	_roamDest = null;
+	_resting = false;
+	sendStandUp();
 	Session.moveAction = null;
 	_moveActionPkt = null;
 	_moveActionTick = 0;
@@ -1297,6 +1422,7 @@ function getStats() {
 	} catch (_e) {
 		hasTarget = 'error';
 	}
+	const sitCfg = getSitRecovery();
 	return {
 		enabled: isEnabled(),
 		prefsEnabled: !!Prefs.enabled,
@@ -1313,6 +1439,9 @@ function getStats() {
 		buffEnabled: !!Prefs.buffEnabled,
 		attackedCount: getMobAttackers(now).length,
 		retaliateGID: _retaliateGID,
+		sitting: isSitting(),
+		resting: _resting,
+		sitRecovery: `enabled=${sitCfg.enabled} sit=${sitCfg.sitTarget}<=${sitCfg.sitThreshold}% stand=${sitCfg.standTarget}>=${sitCfg.standThreshold}% hp=${Math.round(getHpPercent())}% sp=${Math.round(getSpPercent())}%`,
 		buffSlots: getBuffSlotDiagnostics(now)
 	};
 }

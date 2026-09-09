@@ -276,6 +276,11 @@
 	font-weight: bold;
 }
 
+#AutoBattle #ab_sitWarn {
+	color: #c00;
+	font-size: 10px;
+}
+
 #AutoBattle .rec-slot {
 	width: 40px;
 	height: 40px;

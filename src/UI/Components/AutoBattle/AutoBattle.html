@@ -59,6 +59,38 @@
 
 		<div class="tab-panel hidden" data-panel="recovery">
 			<div class="section">
+				<div class="section-title">Sit to Recover</div>
+				<div class="rec-card" id="ab_sitCard">
+					<div class="rec-row">
+						<label><input type="checkbox" id="ab_sitEnabled"> Enable</label>
+						<span class="hint" id="ab_sitWarn"></span>
+					</div>
+					<div class="rec-row">
+						<span>当</span>
+						<select id="ab_sitSitTarget">
+							<option value="hp">HP</option>
+							<option value="sp">SP</option>
+						</select>
+						<span>&lt;=</span>
+						<input type="range" id="ab_sitSitThreshold" min="0" max="100" step="1">
+						<span class="rec-value" id="ab_sitSitValue">50%</span>
+						<span>坐下</span>
+					</div>
+					<div class="rec-row">
+						<span>当</span>
+						<select id="ab_sitStandTarget">
+							<option value="hp">HP</option>
+							<option value="sp">SP</option>
+						</select>
+						<span>&gt;=</span>
+						<input type="range" id="ab_sitStandThreshold" min="0" max="100" step="1">
+						<span class="rec-value" id="ab_sitStandValue">90%</span>
+						<span>站起</span>
+					</div>
+					<div class="row hint">坐下期间暂停打怪/拾取/吃药/漫游，专心回复。</div>
+				</div>
+			</div>
+			<div class="section">
 				<div class="section-title">Recovery Rules</div>
 				<div class="row">
 					<button id="ab_addRecovery">Add Recovery</button>

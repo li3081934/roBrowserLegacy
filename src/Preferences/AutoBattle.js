@@ -33,6 +33,16 @@ export default Preferences.get(
 		// [{ id, enabled, target: 'hp'|'sp', threshold: 0-100,
 		//    action: null | { kind: 'item', ITID } | { kind: 'skill', SKID, level } }]
 		recoveryRules: [],
+		// Sit-to-recover card (recovery tab, independent from recoveryRules):
+		// { enabled, sitTarget: 'hp'|'sp', sitThreshold: 0-100,
+		//   standTarget: 'hp'|'sp', standThreshold: 0-100 }
+		sitRecovery: {
+			enabled: false,
+			sitTarget: 'hp',
+			sitThreshold: 50,
+			standTarget: 'hp',
+			standThreshold: 90
+		},
 		lockCenter: false,
 		centerX: 0,
 		centerY: 0,
@@ -59,5 +69,5 @@ export default Preferences.get(
 		roamRange: 6,
 		roamTries: 10
 	},
-	1.1
+	1.2
 );

@@ -306,6 +306,104 @@ AutoBattle.init = function init() {
 		});
 	}
 
+	// Sit-to-recover card (independent from recovery rules)
+	function ensureSitRecovery() {
+		const def = { enabled: false, sitTarget: 'hp', sitThreshold: 50, standTarget: 'hp', standThreshold: 90 };
+		if (!Prefs.sitRecovery || typeof Prefs.sitRecovery !== 'object') {
+			Prefs.sitRecovery = Object.assign({}, def);
+			Prefs.save();
+		}
+		const s = Prefs.sitRecovery;
+		if (s.sitTarget !== 'sp') s.sitTarget = 'hp';
+		if (s.standTarget !== 'sp') s.standTarget = 'hp';
+		if (typeof s.sitThreshold !== 'number' || isNaN(s.sitThreshold)) s.sitThreshold = def.sitThreshold;
+		if (typeof s.standThreshold !== 'number' || isNaN(s.standThreshold)) s.standThreshold = def.standThreshold;
+		s.sitThreshold = Math.max(0, Math.min(100, Math.round(s.sitThreshold)));
+		s.standThreshold = Math.max(0, Math.min(100, Math.round(s.standThreshold)));
+		s.enabled = !!s.enabled;
+		return s;
+	}
+
+	function updateSitWarn() {
+		const warn = root.querySelector('#ab_sitWarn');
+		if (!warn) return;
+		const s = ensureSitRecovery();
+		if (s.sitTarget === s.standTarget && s.standThreshold <= s.sitThreshold) {
+			warn.textContent = '站起阈值应大于坐下阈值，否则会频繁坐起';
+		} else {
+			warn.textContent = '';
+		}
+	}
+
+	function syncSitCard() {
+		const s = ensureSitRecovery();
+		const en = root.querySelector('#ab_sitEnabled');
+		if (en) en.checked = s.enabled;
+		const sitT = root.querySelector('#ab_sitSitTarget');
+		if (sitT) sitT.value = s.sitTarget;
+		const sitR = root.querySelector('#ab_sitSitThreshold');
+		if (sitR) sitR.value = String(s.sitThreshold);
+		const sitV = root.querySelector('#ab_sitSitValue');
+		if (sitV) sitV.textContent = `${s.sitThreshold}%`;
+		const standT = root.querySelector('#ab_sitStandTarget');
+		if (standT) standT.value = s.standTarget;
+		const standR = root.querySelector('#ab_sitStandThreshold');
+		if (standR) standR.value = String(s.standThreshold);
+		const standV = root.querySelector('#ab_sitStandValue');
+		if (standV) standV.textContent = `${s.standThreshold}%`;
+		updateSitWarn();
+	}
+
+	const sitEnabledEl = root.querySelector('#ab_sitEnabled');
+	if (sitEnabledEl) {
+		sitEnabledEl.addEventListener('change', () => {
+			ensureSitRecovery().enabled = sitEnabledEl.checked;
+			Prefs.save();
+		});
+	}
+	const sitSitTargetEl = root.querySelector('#ab_sitSitTarget');
+	if (sitSitTargetEl) {
+		sitSitTargetEl.addEventListener('change', () => {
+			ensureSitRecovery().sitTarget = sitSitTargetEl.value === 'sp' ? 'sp' : 'hp';
+			Prefs.save();
+			updateSitWarn();
+		});
+	}
+	const sitSitThresholdEl = root.querySelector('#ab_sitSitThreshold');
+	if (sitSitThresholdEl) {
+		sitSitThresholdEl.addEventListener('input', () => {
+			let v = parseInt(sitSitThresholdEl.value, 10);
+			if (isNaN(v)) v = 50;
+			v = Math.max(0, Math.min(100, v));
+			ensureSitRecovery().sitThreshold = v;
+			const label = root.querySelector('#ab_sitSitValue');
+			if (label) label.textContent = `${v}%`;
+			Prefs.save();
+			updateSitWarn();
+		});
+	}
+	const sitStandTargetEl = root.querySelector('#ab_sitStandTarget');
+	if (sitStandTargetEl) {
+		sitStandTargetEl.addEventListener('change', () => {
+			ensureSitRecovery().standTarget = sitStandTargetEl.value === 'sp' ? 'sp' : 'hp';
+			Prefs.save();
+			updateSitWarn();
+		});
+	}
+	const sitStandThresholdEl = root.querySelector('#ab_sitStandThreshold');
+	if (sitStandThresholdEl) {
+		sitStandThresholdEl.addEventListener('input', () => {
+			let v = parseInt(sitStandThresholdEl.value, 10);
+			if (isNaN(v)) v = 90;
+			v = Math.max(0, Math.min(100, v));
+			ensureSitRecovery().standThreshold = v;
+			const label = root.querySelector('#ab_sitStandValue');
+			if (label) label.textContent = `${v}%`;
+			Prefs.save();
+			updateSitWarn();
+		});
+	}
+
 	// Register chat commands once
 	if (!Commands.isEnabled('autobattle')) {
 		Commands.add('autobattle', 'Toggle auto-battle', () => {
@@ -788,6 +886,7 @@ AutoBattle.init = function init() {
 		const so = root.querySelector('#ab_stopOnDeath');
 		if (so) so.checked = !!Prefs.stopOnDeath;
 		renderRecoveryList();
+		syncSitCard();
 		renderTargetList();
 		updateStatus();
 		refreshSkillState();
