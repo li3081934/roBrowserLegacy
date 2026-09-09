@@ -28,7 +28,6 @@ import SpriteRenderer from 'Renderer/SpriteRenderer.js';
 import Ground from 'Renderer/Map/Ground.js';
 import Altitude from 'Renderer/Map/Altitude.js';
 import Session from 'Engine/SessionStorage.js';
-import JobId from 'DB/Jobs/JobConst.js';
 import DB from 'DB/DBManager.js';
 import GraphicsSettings from 'Preferences/Graphics.js';
 import GR2ModelRenderer from 'Renderer/GR2/GR2ModelRenderer.js';
@@ -112,6 +111,7 @@ const renderGUI = (function renderGUIClosure() {
 	const vec4 = glMatrix.vec4;
 	const _matrix = mat4.create();
 	const _vector = vec4.create();
+	const _pickMatrix = mat4.create();
 
 	return function _renderGUI(entity, modelView, projection) {
 		// Move to camera
@@ -135,7 +135,22 @@ const renderGUI = (function renderGUIClosure() {
 		mat4.multiply(_matrix, projection, _matrix);
 
 		if (entity.effectColor[3] && entity._job !== 139) {
-			calculateBoundingRect(entity, _matrix);
+			// Same billboard as above, lifted the way the sprite itself is.
+			_vector[0] = entity.position[0] + 0.5;
+			_vector[1] = -(entity.position[2] + SPRITE_LIFT);
+			_vector[2] = entity.position[1] + 0.5;
+			mat4.translate(_pickMatrix, modelView, _vector);
+			_pickMatrix[0] = 1.0;
+			_pickMatrix[1] = 0.0;
+			_pickMatrix[2] = 0.0;
+			_pickMatrix[4] = 0.0;
+			_pickMatrix[5] = 1.0;
+			_pickMatrix[6] = 0.0;
+			_pickMatrix[8] = 0.0;
+			_pickMatrix[9] = 0.0;
+			_pickMatrix[10] = 1.0;
+			mat4.multiply(_pickMatrix, projection, _pickMatrix);
+			calculateBoundingRect(entity, _pickMatrix);
 		}
 
 		// Get depth for rendering order
@@ -175,6 +190,12 @@ const renderGUI = (function renderGUIClosure() {
  * @param {Entity}
  * @param {mat4}
  */
+/**
+ * Vertical lift renderEntity applies to every sprite before drawing it.
+ * The picking rectangle has to use it too, or it lands below the sprite.
+ */
+const SPRITE_LIFT = 0.2;
+
 const calculateBoundingRect = (function calculateBoundingRectClosure() {
 	const vec4 = glMatrix.vec4;
 	const size = glMatrix.vec2.create();
@@ -610,7 +631,7 @@ function renderSecondBody(entity, layers, spr, pal, files, type, _position, opti
 		const now = Date.now();
 
 		// Determine blur type: 1 (standard), 3 (10f), 4 (once), 5 (10f, attack only)
-		const interval = blurType === 3 || blurType === 5 ? 560 : 80; // 10 frames vs 5 frames
+		const interval = entity.isFastMoving ? 30 : blurType === 3 || blurType === 5 ? 560 : 80; // Fast moves capture at 30ms interval
 		const maxLen =
 			blurType === 4 ? 1 : GraphicsSettings.performanceMode ? Math.floor(trailLength / 2) : trailLength;
 
@@ -618,7 +639,8 @@ function renderSecondBody(entity, layers, spr, pal, files, type, _position, opti
 
 		// Snapshot logic
 		if (blurType === 1 || blurType === 3) {
-			shouldCapture = entity.action === entity.ACTION.WALK && now - trail.lastTick > interval;
+			shouldCapture =
+				(entity.action === entity.ACTION.WALK || entity.isFastMoving) && now - trail.lastTick > interval;
 		} else if (blurType === 4) {
 			shouldCapture = trail.snapshots.length === 0;
 		} else if (blurType === 5) {
@@ -629,7 +651,7 @@ function renderSecondBody(entity, layers, spr, pal, files, type, _position, opti
 				entity.ACTION.ATTACK3,
 				entity.ACTION.SKILL
 			].includes(entity.action);
-			shouldCapture = isCombat && now - trail.lastTick > interval;
+			shouldCapture = (isCombat || entity.isFastMoving) && now - trail.lastTick > interval;
 		}
 
 		if (shouldCapture) {
@@ -827,6 +849,7 @@ const renderElement = (function renderElementClosure() {
 				isOVERTHRUST ||
 				isEXPLOSIONSPIRITS ||
 				isBERSERK ||
+				!!entity._fastMoveTrail ||
 				!!entity._enableTrail,
 			blurType: isBUNSIN ? 5 : isHALLUCINATIONWALK ? 3 : entity._blurType || 1
 		});
@@ -858,17 +881,25 @@ function getAnimationDelay(type, entity, act) {
 		return (act.delay / 150) * entity.walk.speed;
 	}
 
-	// Delay on attack
+	// Delay on attack (fallback when animation.speed is not explicitly set)
+	// Uses the ACT file delay directly (matching official C++ client m_motionSpeed = actRes->GetDelay(action)).
+	// Player normal attacks already provide animation.speed = pkt.attackMT / m_attackMotion in onEntityAttack.
 	if (
 		entity.action === entity.ACTION.ATTACK ||
 		entity.action === entity.ACTION.ATTACK1 ||
 		entity.action === entity.ACTION.ATTACK2 ||
 		entity.action === entity.ACTION.ATTACK3
 	) {
-		return entity.attack_speed / act.animations.length;
+		if (act && act.delay && act.delay > 0) {
+			return act.delay;
+		}
+		if (entity.attack_speed && act && act.animations && act.animations.length > 0) {
+			return Math.max(entity.attack_speed / act.animations.length, 100);
+		}
+		return 150;
 	}
 
-	return act.delay;
+	return (act && act.delay) || 150;
 }
 
 /**
@@ -991,17 +1022,17 @@ function calcAnimation(entity, act, type, tick) {
 	}
 
 	// No repeat
-	anim = Math.min((tick / delay) | 0, animCount || animCount - 1); // Avoid an error if animation = 0, search for -1 :(
+	anim = Math.min((tick / delay) | 0, animCount ? animCount - 1 : 0);
 
 	anim %= animCount;
 	anim += animCount * headDir; // get rid of doridori
 	anim += animation.frame; // previous frame
 	anim %= animSize; // avoid overflow
 
-	const lastFrame = animation.frame + animSize - 1;
+	const lastFrame = animation.frame + animCount - 1;
 
-	if (type === 'body' && anim >= lastFrame) {
-		animation.frame = anim = lastFrame;
+	if (type === 'body' && ((tick / delay) | 0) >= animCount - 1) {
+		animation.frame = anim = Math.min(lastFrame, animSize - 1);
 		animation.play = false;
 		if (animation.next) {
 			entity.setAction(animation.next);
