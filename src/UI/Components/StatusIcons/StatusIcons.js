@@ -173,6 +173,22 @@ StatusIcons.has = function has(index) {
 	return entry.end === Infinity || entry.end > Renderer.tick;
 };
 
+/**
+ * Remaining milliseconds of a status, for read-only consumers that need
+ * an exact server-provided duration (e.g. EFST_POSTDELAY aftercast).
+ *
+ * @param {number} status id (EFST index)
+ * @returns {number} ms left, or 0 when absent/expired/unknown
+ */
+StatusIcons.remaining = function remaining(index) {
+	const entry = _status[index];
+	if (!entry || typeof entry.end !== 'number' || isNaN(entry.end) || entry.end === Infinity) {
+		return 0;
+	}
+	const left = entry.end - Renderer.tick;
+	return left > 0 ? left : 0;
+};
+
 function loadStatusIcon(index) {
 	const isTKM = Session.Entity && DB.isTaeKwon(Session.Entity._job);
 	const tkmVariant = (isTKM && TKM_ICON_OVERRIDE[index]) || null;

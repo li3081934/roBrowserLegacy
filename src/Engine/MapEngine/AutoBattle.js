@@ -24,6 +24,7 @@ import SkillId from 'DB/Skills/SkillConst.js';
 import { setAutoSelectWarpTick } from 'Engine/MapEngine/TeleportAutoSelect.js';
 import SkillList from 'UI/Components/SkillList/SkillList.js';
 import StatusIcons from 'UI/Components/StatusIcons/StatusIcons.js';
+import StatusConst from 'DB/Status/StatusConst.js';
 import LootRates from 'Engine/MapEngine/LootRates.js';
 import { getRecentAttackers, ATTACK_WINDOW_MS } from 'Engine/MapEngine/AttackTracker.js';
 import Prefs from 'Preferences/AutoBattle.js';
@@ -311,7 +312,13 @@ function isBusy() {
  * Enter the casting satellite state. Sending the skill and entering must
  * be atomic (same code path) so there is no blind window.
  */
-function enterCasting(returnState, skillId) {
+/**
+ * Enter the casting satellite state. Sending the skill and entering must
+ * be atomic (same code path) so there is no blind window.
+ * trusted: true only when WE sent the skill with a known SKID (then the
+ * static aftercast table may be used); passive bar pickups pass false.
+ */
+function enterCasting(returnState, skillId, trusted) {
 	if (_state === ST_CASTING) {
 		return;
 	}
@@ -323,6 +330,7 @@ function enterCasting(returnState, skillId) {
 		barStartWall: 0,
 		delay: (typeof learned === 'number' && learned > 0) ? learned : 0,
 		returnState: returnState === ST_CASTING ? ST_IDLE : returnState,
+		trusted: trusted !== false,
 		result: '-'
 	};
 	setState(ST_CASTING, Renderer.tick);
@@ -331,10 +339,37 @@ function enterCasting(returnState, skillId) {
 function exitCasting(result, now) {
 	const ret = (_pendingCast && _pendingCast.returnState) || ST_IDLE;
 	const skillId = _pendingCast && _pendingCast.skillId;
+	const trusted = !!(_pendingCast && _pendingCast.trusted);
 	_castLastInfo = `${skillId || '?'}:${result}`;
 	_pendingCast = null;
-	// Any own cast (landed or not) leaves server canact hot past what we
-	// can see: the next skill send waits out the grace in useSkillOnSelf.
+	// Settle the post-cast grace (three tiers, first hit wins):
+	// 1. live server value (EFST_POSTDELAY remaining: exact, post-ACD/gear),
+	// 2. static AfterCastActDelay table (exact only when WE sent it),
+	// 3. conservative fallback.
+	// Zero-delay skills send nothing observable: tier 1 is empty and the
+	// table says 0, so only the small live margin applies.
+	let live = 0;
+	try {
+		if (StatusIcons && typeof StatusIcons.remaining === 'function') {
+			live = StatusIcons.remaining(StatusConst.POSTDELAY) || 0;
+		}
+	} catch (_e) {
+		live = 0;
+	}
+	let tabled;
+	if (trusted && skillId && typeof SKILL_AFTERCAST[skillId] === 'number') {
+		tabled = SKILL_AFTERCAST[skillId];
+	}
+	if (live > 0) {
+		_lastPostDelayMs = live + POSTDELAY_LIVE_MARGIN_MS;
+		_lastPostDelaySrc = 'live';
+	} else if (typeof tabled === 'number') {
+		_lastPostDelayMs = tabled + POSTDELAY_TABLE_MARGIN_MS;
+		_lastPostDelaySrc = 'table';
+	} else {
+		_lastPostDelayMs = OWN_CAST_GRACE_FALLBACK_MS;
+		_lastPostDelaySrc = 'fallback';
+	}
 	_lastOwnCastEndTick = now;
 	// Our own cast stopped continuous attack: refire once when resuming
 	// normal-attack combat (skill-mode combat re-fires on its own beat).
@@ -854,9 +889,9 @@ function useSkillOnSelf(skillId, level) {
 		}
 	}
 	// Post-cast grace: our own previous cast leaves server canact hot past
-	// its visible end (e.g. IncAgi's 400ms aftercast, invisible to us). The
-	// next skill sent inside it duds deterministically, so hold briefly.
-	if (Renderer.tick - _lastOwnCastEndTick < OWN_CAST_GRACE_MS) {
+	// its visible end. Settled per exit (live postdelay > static table >
+	// fallback); see exitCasting.
+	if (Renderer.tick - _lastOwnCastEndTick < _lastPostDelayMs) {
 		return false;
 	}
 	// SP affordability pre-check: never send a skill we can't afford.
@@ -1499,8 +1534,30 @@ let _lastBuffSkillSendTick = 0;
 const BUFF_SETTLE_MS = 2500;
 // Hold after any own cast ends before the next self-skill send: covers
 // invisible server aftercast residue that would dud the retry deterministically.
-const OWN_CAST_GRACE_MS = 600;
+// Settled per exit (three tiers): live EFST_POSTDELAY remaining (+small
+// margin, exact incl. gear) > static AfterCastActDelay table (+margin,
+// safe-side) > conservative fallback.
+const OWN_CAST_GRACE_FALLBACK_MS = 600;
+const POSTDELAY_LIVE_MARGIN_MS = 100;
+const POSTDELAY_TABLE_MARGIN_MS = 200;
 let _lastOwnCastEndTick = 0;
+let _lastPostDelayMs = 0;
+let _lastPostDelaySrc = '-';
+// Static AfterCastActDelay (ms) for skills WE send (db/re/skill_db.yml).
+// If the server db changes, sync this table. Unknown SKIDs use fallback.
+// Raw DEX/AGI/INT do not affect aftercast (delay_dependon off); ACD gear
+// only shortens, so table + margin stays on the safe side.
+const SKILL_AFTERCAST = {
+	[SkillId.SM_ENDURE]: 0,
+	[SkillId.AL_TELEPORT]: 0,
+	[SkillId.AL_HEAL]: 500,
+	[SkillId.AL_INCAGI]: 400,
+	[SkillId.AL_ANGELUS]: 500,
+	[SkillId.AL_BLESSING]: 0,
+	[SkillId.PR_IMPOSITIO]: 1000,
+	[SkillId.PR_MAGNIFICAT]: 2000,
+	[SkillId.PR_GLORIA]: 2000
+};
 
 function isStatusIconActive(efst) {
 	// Single source of truth: StatusIcons is fed by Entity's
@@ -1950,7 +2007,7 @@ function tickImpl() {
 		const p = getPlayer();
 		const cast = p && p.cast;
 		if (cast && cast.display && cast.delay > 0) {
-			enterCasting(_state, (Session.Entity && Session.Entity.lastSKID) || 0);
+			enterCasting(_state, (Session.Entity && Session.Entity.lastSKID) || 0, false);
 		}
 	}
 
@@ -2053,6 +2110,8 @@ function start() {
 	_castLastInfo = '-';
 	_lastBuffSkillSendTick = 0;
 	_lastOwnCastEndTick = 0;
+	_lastPostDelayMs = 0;
+	_lastPostDelaySrc = '-';
 	for (let i = 0; i < _buffDud.length; i++) {
 		_buffDud[i] = 0;
 		_buffGateJitter[i] = 0;
@@ -2155,6 +2214,7 @@ function getStats() {
 		stateGID: _stateGID,
 		skillBeat: _skillBeatTimer !== null,
 		cast: _castLastInfo,
+		postDelay: `${_lastPostDelayMs}ms(${_lastPostDelaySrc})`,
 		moveAction: !!Session.moveAction,
 		moveActionOurs: !!(_moveActionPkt && Session.moveAction === _moveActionPkt),
 		moveActionAgeMs: (_moveActionPkt && Session.moveAction === _moveActionPkt) ? now - _moveActionTick : 0,
