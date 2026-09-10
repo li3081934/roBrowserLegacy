@@ -444,8 +444,10 @@ function updateResting(now) {
 	}
 	sendSitDown();
 	// Emergency escape still wins while resting (stand + teleport).
+	// Either count rule (attacked / surrounded) fires.
 	const countThreshold = typeof Prefs.attackedTeleportCount === 'number' ? Prefs.attackedTeleportCount : 0;
-	if (countThreshold > 0 && getMobAttackers(now).length > countThreshold) {
+	const surrounded = getSurroundTeleportCount() > 0 && countNearbyMobs() >= getSurroundTeleportCount();
+	if ((countThreshold > 0 && getMobAttackers(now).length > countThreshold) || surrounded) {
 		if (tryTeleportSlots()) {
 			_lastTargetSeenTick = now;
 			_retaliateGID = null;
@@ -517,6 +519,63 @@ function getMobAttackers(now) {
 	return out;
 }
 
+/**
+ * Live mobs within 2 cells of the player (5x5, Chebyshev). Escape-oriented:
+ * ignores the target filter, counts anything dangerous nearby.
+ */
+function countNearbyMobs() {
+	const player = getPlayer();
+	if (!player) {
+		return 0;
+	}
+	const px = Math.floor(player.position[0]);
+	const py = Math.floor(player.position[1]);
+	let count = 0;
+	try {
+		EntityManager.forEach(entity => {
+			if (!isMobEntity(entity)) {
+				return true;
+			}
+			if (entity.action === entity.ACTION.DIE || entity.remove_tick !== 0) {
+				return true;
+			}
+			if (entity.isVisible && !entity.isVisible()) {
+				return true;
+			}
+			const dx = Math.abs(Math.floor(entity.position[0]) - px);
+			const dy = Math.abs(Math.floor(entity.position[1]) - py);
+			if (dx <= 2 && dy <= 2) {
+				count++;
+			}
+			return true;
+		});
+	} catch (_e) {
+		// ignore
+	}
+	return count;
+}
+
+function getSurroundTeleportCount() {
+	const v = typeof Prefs.surroundTeleportCount === 'number' ? Prefs.surroundTeleportCount : 0;
+	if (isNaN(v)) {
+		return 0;
+	}
+	return Math.max(0, Math.min(99, Math.round(v)));
+}
+
+/**
+ * Shared escape attempt for the two count rules (attacked / surrounded).
+ * Returns true when a teleport went out and the tick is consumed.
+ */
+function tryEscapeTeleport(now) {
+	if (tryTeleportSlots()) {
+		_lastTargetSeenTick = now;
+		_retaliateGID = null;
+		return true;
+	}
+	return false;
+}
+
 function getActiveTargetFilter() {
 	try {
 		if (Array.isArray(Prefs.targetFilter) && Prefs.targetFilter.length &&
@@ -537,12 +596,17 @@ function getActiveTargetFilter() {
 function handleAttacked(now) {
 	const attackers = getMobAttackers(now);
 
-	// Count rule: independent override, escape first.
+	// Count rules: independent overrides, escape first. Either one fires.
 	const countThreshold = typeof Prefs.attackedTeleportCount === 'number' ? Prefs.attackedTeleportCount : 0;
 	if (countThreshold > 0 && attackers.length > countThreshold) {
-		if (tryTeleportSlots()) {
-			_lastTargetSeenTick = now;
-			_retaliateGID = null;
+		if (tryEscapeTeleport(now)) {
+			return true;
+		}
+	}
+
+	const surroundThreshold = getSurroundTeleportCount();
+	if (surroundThreshold > 0 && countNearbyMobs() >= surroundThreshold) {
+		if (tryEscapeTeleport(now)) {
 			return true;
 		}
 	}
@@ -2223,6 +2287,7 @@ function getStats() {
 		buffEnabled: !!Prefs.buffEnabled,
 		sp: player && player.life ? `${player.life.sp}/${player.life.sp_max}` : '-',
 		attackedCount: getMobAttackers(now).length,
+		surroundCount: countNearbyMobs(),
 		retaliateGID: _retaliateGID,
 		sitting: isSitting(),
 		sitRecovery: `enabled=${sitCfg.enabled} sit=${sitCfg.sitTarget}<=${sitCfg.sitThreshold}% stand=${sitCfg.standTarget}>=${sitCfg.standThreshold}% hp=${Math.round(getHpPercent())}% sp=${Math.round(getSpPercent())}%`,

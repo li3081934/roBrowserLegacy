@@ -133,7 +133,10 @@
 				<div class="row">
 					<label>Teleport when attackers &gt; <input type="number" id="ab_attackedTeleportCount" min="0" max="20" step="1"> (0 = off)</label>
 				</div>
-				<div class="row hint">Retaliate fights back until it dies/leaves. Count rule always wins and uses teleport slots.</div>
+				<div class="row">
+					<label>周围怪物 &gt;= <input type="number" id="ab_surroundTeleportCount" min="0" max="99" step="1"> 只时使用传送 (0 = off)</label>
+				</div>
+				<div class="row hint">Retaliate fights back until it dies/leaves. Either count rule (attackers / surrounding in 2 cells) wins and uses teleport slots.</div>
 			</div>
 		</div>
 

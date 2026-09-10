@@ -259,6 +259,16 @@ AutoBattle.init = function init() {
 		});
 	}
 
+	const surroundCountEl = root.querySelector('#ab_surroundTeleportCount');
+	if (surroundCountEl) {
+		surroundCountEl.addEventListener('change', () => {
+			let v = parseInt(surroundCountEl.value, 10);
+			if (isNaN(v)) v = 0;
+			Prefs.surroundTeleportCount = Math.max(0, Math.min(99, v));
+			Prefs.save();
+		});
+	}
+
 	const stopEl = root.querySelector('#ab_stopOnDeath');
 	if (stopEl) {
 		stopEl.addEventListener('change', () => {
@@ -877,6 +887,8 @@ AutoBattle.init = function init() {
 		if (aa) aa.value = Prefs.attackedAction === 'retaliate' || Prefs.attackedAction === 'teleport' ? Prefs.attackedAction : 'ignore';
 		const atc = root.querySelector('#ab_attackedTeleportCount');
 		if (atc) atc.value = Prefs.attackedTeleportCount;
+		const stc = root.querySelector('#ab_surroundTeleportCount');
+		if (stc) stc.value = typeof Prefs.surroundTeleportCount === 'number' ? Prefs.surroundTeleportCount : 0;
 		const so = root.querySelector('#ab_stopOnDeath');
 		if (so) so.checked = !!Prefs.stopOnDeath;
 		renderRecoveryList();

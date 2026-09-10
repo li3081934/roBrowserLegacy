@@ -66,6 +66,8 @@ export default Preferences.get(
 		attackedAction: 'ignore',
 		// Teleport when distinct mob attackers in 5s window exceed this (0 = off).
 		attackedTeleportCount: 3,
+		// Teleport when live mobs within 2 cells (5x5) reach this (0 = off).
+		surroundTeleportCount: 0,
 		roamWhenIdle: true,
 		roamInterval: 3000,
 		roamRange: 6,
