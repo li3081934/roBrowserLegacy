@@ -1,0 +1,19 @@
+src/DB/Items/ItemRandomOptionTable.js
+  s_9adf66804db09e::t_f5e8ea31be2218 184-185
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9e751d9ad7fd2522eb0129267ee0cfadf2a20c0a",
+  "prompts": {},
+  "sessions": {
+    "s_9adf66804db09e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f85ab42c4ffeNkUba2jU0KPtBy",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
