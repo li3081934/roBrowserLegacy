@@ -1,0 +1,43 @@
+<div id="Teleport">
+	<div class="titlebar" data-background="basic_interface/titlebar_mid.bmp">
+		<div class="left">
+			<button
+				class="base"
+				data-background="basic_interface/sys_base_off.bmp"
+				data-hover="basic_interface/sys_base_on.bmp"
+			></button>
+			<span class="text">便利传送</span>
+		</div>
+		<div class="right">
+			<button
+				class="base close"
+				data-background="basic_interface/sys_close_off.bmp"
+				data-hover="basic_interface/sys_close_on.bmp"
+			></button>
+		</div>
+		<div class="clear"></div>
+	</div>
+	<div class="content">
+		<div class="toolbar">
+			<input type="text" class="search" placeholder="搜索名称 / 地图ID..." />
+			<button class="fav-current" title="把当前位置加入收藏">★ 收藏当前</button>
+		</div>
+
+		<div class="tabs">
+			<button class="tab active" data-tab="cities">城市</button>
+			<button class="tab" data-tab="fields">野外</button>
+			<button class="tab" data-tab="mine">收藏/最近</button>
+		</div>
+
+		<div class="subtabs hidden" data-tab="mine">
+			<button class="subtab active" data-sub="favorites">收藏</button>
+			<button class="subtab" data-sub="recent">最近</button>
+		</div>
+
+		<div class="list"></div>
+
+		<div class="footer">
+			<span class="status"></span>
+		</div>
+	</div>
+</div>

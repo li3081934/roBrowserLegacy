@@ -124,6 +124,8 @@ import CardBook from 'UI/Components/CardBook/CardBook.js';
 import MobDrop from 'UI/Components/MobDrop/MobDrop.js';
 import CardAlbumEngine from './MapEngine/CardAlbum.js';
 import MobDropEngine from './MapEngine/MobDrop.js';
+import TeleportEngine from './MapEngine/Teleport.js';
+import Teleport from 'UI/Components/Teleport/Teleport.js';
 
 /**
  * @type {string} mapname
@@ -341,8 +343,10 @@ class MapEngine {
 		AutoBattleEngine.init();
 		CardAlbumEngine();
 		MobDropEngine();
+		TeleportEngine();
 		CardBook.prepare();
 		MobDrop.prepare();
+		Teleport.prepare();
 
 			// Prepare UI
 			Escape.prepare();
@@ -828,7 +832,8 @@ function cleanGameUI() {
 		[CashShop, 'clean'],
 		[AutoBattle, 'remove'],
 		[CardBook, 'remove'],
-		[MobDrop, 'remove']
+		[MobDrop, 'remove'],
+		[Teleport, 'remove']
 	];
 
 	for (const [target, method] of tasks) {

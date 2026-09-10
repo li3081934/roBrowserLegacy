@@ -16000,6 +16000,36 @@ PACKET.ZC.ACK_MOBDROPS = function PACKET_ZC_ACK_MOBDROPS(fp, end) {
 };
 PACKET.ZC.ACK_MOBDROPS.size = -1;
 
+// 0x0c49 - CZ_REQ_TELEPORT <map name>.16B <x>.W <y>.W (custom: convenience teleport)
+// Server validates (permission / item cost / cooldown) then warps.
+// x = y = 0 asks the server to pick a random walkable cell.
+PACKET.CZ.REQ_TELEPORT = function PACKET_CZ_REQ_TELEPORT() {
+	this.mapName = '';
+	this.xPos = 0;
+	this.yPos = 0;
+};
+PACKET.CZ.REQ_TELEPORT.prototype.build = function () {
+	const pkt_len = 2 + 16 + 2 + 2;
+	const pkt_buf = new BinaryWriter(pkt_len);
+
+	pkt_buf.writeShort(0x0c49);
+	pkt_buf.writeBinaryString(this.mapName, 16);
+	pkt_buf.writeShort(this.xPos);
+	pkt_buf.writeShort(this.yPos);
+	return pkt_buf;
+};
+
+// 0x0c4a - ZC_ACK_TELEPORT <result>.B <pad>.B <param>.W (custom)
+// result: 0=OK 1=map not found 2=blocked 3=denied 4=missing item
+//         5=cooldown 6=invalid coords 7=job/level gate
+// param carries a detail for some results (e.g. required item id).
+PACKET.ZC.ACK_TELEPORT = function PACKET_ZC_ACK_TELEPORT(fp, end) {
+	this.result = fp.readUChar();
+	this.pad = fp.readUChar();
+	this.param = fp.readUShort();
+};
+PACKET.ZC.ACK_TELEPORT.size = 6;
+
 /**
  * Export
  */

@@ -40,6 +40,7 @@ import Achievement from 'UI/Components/Achievement/Achievement.js';
 import Reputation from 'UI/Components/Reputation/Reputation.js';
 import AutoBattle from 'UI/Components/AutoBattle/AutoBattle.js';
 import CardBook from 'UI/Components/CardBook/CardBook.js';
+import Teleport from 'UI/Components/Teleport/Teleport.js';
 
 export function createBasicInfo(config) {
 	const {
@@ -164,6 +165,9 @@ export function createBasicInfo(config) {
 				break;
 			case 'cardbook':
 				CardBook.toggle();
+				break;
+			case 'teleport':
+				Teleport.toggle();
 				break;
 		}
 	}

@@ -378,6 +378,12 @@ ShortCuts.Achievement = {
 	component: 'Achievement',
 	cmd: 'TOGGLE'
 };
+ShortCuts.Teleport = {
+	init: { key: KEYS.O, alt: true, ctrl: false, shift: false },
+	cust: false,
+	component: 'Teleport',
+	cmd: 'TOGGLE'
+};
 
 //Custom
 /*ShortCuts.M_UI =			{	init:{key: KEYS[9],		alt: false,	ctrl: true,		shift: false},	cust: false,	component:'MobileUI',			cmd:'SHOW'					};
@@ -504,4 +510,14 @@ ShortCuts.Flag9 = {
 
 const ShortCutControls = { ShortCuts: ShortCuts };
 
-export default Preferences.get('ShortCutControls', ShortCutControls, 1.2);
+const prefs = Preferences.get('ShortCutControls', ShortCutControls, 1.2);
+
+// Merge in shortcuts added after a user's settings were first stored.
+// Preferences.get() replaces the whole ShortCuts object with the stored one,
+// so fresh entries (e.g. Teleport) would otherwise never appear.
+if (prefs.ShortCuts && !prefs.ShortCuts.Teleport) {
+	prefs.ShortCuts.Teleport = ShortCuts.Teleport;
+	prefs.save();
+}
+
+export default prefs;

@@ -105,6 +105,9 @@ function init(packetver) {
 		packets_len[0x0c46] = -1;
 		packets_len[0x0c47] = 4;
 		packets_len[0x0c48] = -1;
+		// Convenience teleport (custom request + ack)
+		packets_len[0x0c49] = 22;
+		packets_len[0x0c4a] = 6;
 		console.log('%c[Network] Packet Length initialized ', 'color:#007000', packetver);
 	} else {
 		console.error(`[Network] Failed to load packet lengths for year ${selectedYear} (path: ${modulePath})`);

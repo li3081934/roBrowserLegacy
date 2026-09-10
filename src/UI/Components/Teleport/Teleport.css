@@ -1,0 +1,224 @@
+:host {
+	position: absolute;
+	top: 120px;
+	left: 320px;
+	width: 320px;
+}
+
+#Teleport {
+	position: relative;
+	width: 100%;
+	/* Definite height so the flex list can scroll; capped to the viewport. */
+	height: 430px;
+	max-height: 80vh;
+	background-color: #ece9d8;
+	border: 1px solid #a0a0a0;
+	border-radius: 6px;
+	display: flex;
+	flex-direction: column;
+	font-family: Arial, sans-serif;
+	font-size: 12px;
+	color: #333;
+}
+
+#Teleport .titlebar {
+	width: 100%;
+	height: 17px;
+	background-color: white;
+	background-repeat: repeat-x;
+	border-radius: 3px 3px 0 0;
+}
+
+#Teleport .titlebar .base {
+	width: 11px;
+	height: 11px;
+	border: none;
+	background-color: transparent;
+	background-repeat: no-repeat;
+	vertical-align: middle;
+}
+
+#Teleport .titlebar .text {
+	text-shadow: 1px 1px white;
+	vertical-align: -2px;
+	white-space: nowrap;
+	display: inline-block;
+	height: 13px;
+	font-size: 11px;
+	font-weight: bold;
+}
+
+#Teleport .titlebar .left {
+	margin-left: 3px;
+	float: left;
+}
+
+#Teleport .titlebar .right {
+	float: right;
+	margin-right: 3px;
+}
+
+#Teleport .clear {
+	clear: both;
+}
+
+#Teleport .content {
+	flex: 1;
+	padding: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	min-height: 0;
+}
+
+#Teleport .toolbar {
+	display: flex;
+	gap: 6px;
+}
+
+#Teleport .toolbar .search {
+	flex: 1;
+	padding: 3px 6px;
+	border: 1px solid #aaa;
+	border-radius: 3px;
+}
+
+#Teleport .toolbar .fav-current {
+	padding: 3px 6px;
+	border: 1px solid #888;
+	border-radius: 3px;
+	background: #f0f0f0;
+	cursor: pointer;
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+#Teleport .toolbar .fav-current:hover {
+	background: #e0e0e0;
+}
+
+#Teleport .tabs {
+	display: flex;
+	gap: 4px;
+}
+
+#Teleport .tabs .tab {
+	flex: 1;
+	padding: 4px 0;
+	border: 1px solid #888;
+	border-radius: 3px 3px 0 0;
+	background: #d8d5c5;
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: bold;
+	color: #555;
+}
+
+#Teleport .tabs .tab.active {
+	background: #fff;
+	color: #222;
+	border-bottom-color: #fff;
+}
+
+#Teleport .subtabs {
+	display: flex;
+	gap: 6px;
+}
+
+#Teleport .subtabs.hidden {
+	display: none;
+}
+
+#Teleport .subtabs .subtab {
+	padding: 2px 10px;
+	border: 1px solid #aaa;
+	border-radius: 10px;
+	background: #efeee6;
+	cursor: pointer;
+	font-size: 11px;
+	color: #666;
+}
+
+#Teleport .subtabs .subtab.active {
+	background: #4c6ef5;
+	border-color: #3b5bdb;
+	color: #fff;
+}
+
+#Teleport .list {
+	flex: 1;
+	overflow-y: auto;
+	background: #fff;
+	border: 1px solid #aaa;
+	border-radius: 4px;
+	min-height: 0;
+}
+
+#Teleport .list .row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 8px;
+	border-bottom: 1px solid #eee;
+	cursor: pointer;
+}
+
+#Teleport .list .row:hover {
+	background: #eef4ff;
+}
+
+#Teleport .list .row .name {
+	flex: 1;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+#Teleport .list .row .map {
+	color: #888;
+	font-size: 10px;
+}
+
+#Teleport .list .row .level {
+	color: #2a6;
+	font-size: 10px;
+}
+
+#Teleport .list .row .star {
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	font-size: 14px;
+	line-height: 1;
+	color: #bbb;
+	padding: 0 2px;
+}
+
+#Teleport .list .row .star.on {
+	color: #f5a623;
+}
+
+#Teleport .list .empty {
+	color: #888;
+	font-size: 11px;
+	padding: 12px;
+	text-align: center;
+}
+
+#Teleport .footer {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 6px;
+	font-size: 10px;
+	color: #666;
+	min-height: 12px;
+}
+
+#Teleport .footer .status {
+	text-align: right;
+	color: #b00;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
