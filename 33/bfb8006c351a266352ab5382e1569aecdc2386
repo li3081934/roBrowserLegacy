@@ -1,0 +1,24 @@
+src/Engine/MapEngine/AutoBattle.js
+  s_6e16c62fdc40da::t_b23de86ca0d528 1598-1600
+  s_6e16c62fdc40da::t_cde8ab27906246 1835-1843
+  s_6e16c62fdc40da::t_71393ce37fb68b 903
+  s_6e16c62fdc40da::t_4da4d4d6b9a656 2326
+  s_6e16c62fdc40da::t_fe335e01d5a815 2212
+  s_6e16c62fdc40da::t_1454c7bd3311c4 1796-1818
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.2",
+  "base_commit_sha": "33bfb8006c351a266352ab5382e1569aecdc2386",
+  "prompts": {},
+  "sessions": {
+    "s_6e16c62fdc40da": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7fb77fb8ffeiFUYDrH2bU347S",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
