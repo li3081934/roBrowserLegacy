@@ -1,0 +1,61 @@
+src/Preferences/ShortCutControls.js
+  s_837f8d8321ffae::t_0589a5b27a21fc 381-386
+  s_837f8d8321ffae::t_d65fb7d480d47c 513-523
+src/UI/Components/BasicInfo/BasicInfoV5/BasicInfoV5.html
+  s_837f8d8321ffae::t_6b955e9efaa09b 291-298
+src/Engine/MapEngine.js
+  s_837f8d8321ffae::t_cd04fa51fbf798 835-836
+  s_837f8d8321ffae::t_8e5b0e8529ca20 346,348-349
+  s_837f8d8321ffae::t_ea066ce4abfafb 127-128
+src/UI/Components/Teleport/Teleport.html
+  s_837f8d8321ffae::t_e8dc623f75c1d7 1-43
+src/DB/Teleport/Destinations.js
+  s_837f8d8321ffae::t_f1774d60058111 1-90
+src/Network/PacketStructure.js
+  s_837f8d8321ffae::t_06ab7d024f6148 16022,16029
+  s_837f8d8321ffae::t_ab5e97cb73241f 16003-16021,16023-16028,16030-16032
+src/Network/PacketRegister.js
+  s_837f8d8321ffae::t_6660465dbc8c65 983-987
+src/UI/Components/BasicInfo/BasicInfoCommon.js
+  s_837f8d8321ffae::t_7929226728c20e 169-171
+  s_837f8d8321ffae::t_61f1fe3a31ee6c 43
+src/Engine/MapEngine/Teleport.js
+  s_837f8d8321ffae::t_354f3ef8319d0b 1-67
+src/UI/Components/Teleport/Teleport.js
+  s_837f8d8321ffae::t_d1df78742d6642 45
+  s_837f8d8321ffae::t_034d9c1d63f1c1 214,218-233
+  s_837f8d8321ffae::t_a39fbd36ddd84b 1-44,46-73,80,84-102,105-188,191-213,215-217,234-248,251-257,270-321,324-383
+  s_837f8d8321ffae::t_49a6865c7ce0b9 189-190
+  s_837f8d8321ffae::t_25f792358a43b5 249-250,258-269
+  s_837f8d8321ffae::t_c010be61ace7d5 322-323
+  s_837f8d8321ffae::t_f09caa04273e53 74-79,81-83
+  s_837f8d8321ffae::t_717b97aa117238 103-104
+src/Preferences/Teleport.js
+  s_837f8d8321ffae::t_347af81e46b4d5 1-15,17,20-21,23-25
+  s_837f8d8321ffae::t_d890f5e91e37f2 16,18-19,22
+src/Network/PacketLength.js
+  s_837f8d8321ffae::t_b068fff0fa6370 108-110
+src/UI/Components/Teleport/Teleport.css
+  s_837f8d8321ffae::t_b4656d9bcef7cd 211,215
+  s_837f8d8321ffae::t_bd7cd9fd861a47 123-147
+  s_837f8d8321ffae::t_3db501d89efbd7 1-10,14-122,148-210,212-214,216-224
+  s_837f8d8321ffae::t_4702a1c5e9e26c 11-13
+src/UI/Components/BasicInfo/BasicInfoV4/BasicInfoV4.html
+  s_837f8d8321ffae::t_1350a36e3cbd95 265-272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "aa0870453b46aa28e31d83c4cac9829fd1d8f0ae",
+  "prompts": {},
+  "sessions": {
+    "s_837f8d8321ffae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7600c5a3ffe58rSNkM3qYOXLB",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
