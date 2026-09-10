@@ -76,6 +76,7 @@ const COMBAT_REATTACK_MS = 5000;
 const SKILL_REFIRE_FLOOR_MS = 150; // just above server min (100 + SECURITY 100)
 const SKILL_REFIRE_CAST_MARGIN_MS = 200;
 let _skillBeatTimer = null; // exact-time combat-skill refire, decoupled from the 200ms tick grid
+let _recBeatTimer = null; // exact-time recovery-skill refire (instant skills only)
 let _skillLastFire = 0;
 // Set when our own skill cast interrupted continuous attack: refire once.
 let _combatDisrupted = false;
@@ -228,6 +229,81 @@ function skillRefireFloor(skillId) {
 	return Math.max(SKILL_REFIRE_FLOOR_MS, learned + SKILL_REFIRE_CAST_MARGIN_MS);
 }
 
+// Recovery beat interval: static table value (+margin) for the skill just
+// sent. Unknown skills fall back conservatively; the tick stays as fallback.
+const REC_BEAT_MARGIN_MS = 150;
+function recBeatInterval(skillId) {
+	const tabled = (typeof SKILL_AFTERCAST[skillId] === 'number') ? SKILL_AFTERCAST[skillId] : OWN_CAST_GRACE_FALLBACK_MS;
+	return tabled + REC_BEAT_MARGIN_MS;
+}
+
+function armRecBeat(ms) {
+	if (_recBeatTimer !== null) {
+		Events.clearTimeout(_recBeatTimer);
+		_recBeatTimer = null;
+	}
+	if (!_enabled || !Prefs.enabled) {
+		return;
+	}
+	_recBeatTimer = Events.setTimeout(onRecoveryBeat, Math.max(50, ms));
+}
+
+function disarmRecBeat() {
+	if (_recBeatTimer !== null) {
+		Events.clearTimeout(_recBeatTimer);
+		_recBeatTimer = null;
+	}
+}
+
+/**
+ * Exact-time recovery-skill refire for instant skills (no cast bar, so the
+ * satellite state never engages). Re-selects the first demand rule, like
+ * the tick path; any state change or block disarms and the tick resumes.
+ */
+function onRecoveryBeat() {
+	_recBeatTimer = null;
+	if (!_enabled || !Prefs.enabled) {
+		return;
+	}
+	if (!isPlayerValid() || isOverWeight()) {
+		return;
+	}
+	if (_state === ST_CASTING || _state === ST_RESTING) {
+		return;
+	}
+	const hpP = getHpPercent();
+	const spP = getSpPercent();
+	const rules = Array.isArray(Prefs.recoveryRules) && Prefs.recoveryRules.length ? Prefs.recoveryRules : getLegacyRecoveryRules();
+	for (let i = 0; i < rules.length; i++) {
+		const rule = rules[i];
+		if (!rule || rule.enabled === false || !rule.action || rule.action.kind !== 'skill') {
+			continue;
+		}
+		const percent = rule.target === 'sp' ? spP : hpP;
+		const threshold = typeof rule.threshold === 'number' ? rule.threshold : 50;
+		if (!(percent < threshold)) {
+			continue;
+		}
+		const SKID = parseInt(rule.action.SKID, 10);
+		let lv = parseInt(rule.action.level, 10);
+		if (isNaN(SKID) || isNaN(lv)) {
+			continue;
+		}
+		lv = Math.max(1, Math.min(10, lv));
+		if ((_skillCastLen[SKID] || 0) > 0) {
+			return; // cast-time skills belong to the casting flow now
+		}
+		if (selfCastBlocked(SKID, lv)) {
+			return; // blocked: tick retries, no spin
+		}
+		if (sendSelfSkillPacket(SKID, lv)) {
+			_lastRecoverySkillSendTick = Renderer.tick;
+			armRecBeat(recBeatInterval(SKID));
+		}
+		return;
+	}
+}
+
 function armSkillBeat(ms) {
 	if (_skillBeatTimer !== null) {
 		Events.clearTimeout(_skillBeatTimer);
@@ -322,6 +398,8 @@ function enterCasting(returnState, skillId, trusted) {
 	if (_state === ST_CASTING) {
 		return;
 	}
+	// A real bar takes over pacing from here (recovery beat included).
+	disarmRecBeat();
 	const learned = _skillCastLen[skillId];
 	_pendingCast = {
 		skillId: skillId || 0,
@@ -899,8 +977,15 @@ function tryUsePotion() {
 			continue;
 		}
 		if (rule.action.kind === 'skill') {
+			if (_recBeatTimer !== null) {
+				continue; // beat owns instant-skill pacing; items below still fire
+			}
 			if (useSkillOnSelf(rule.action.SKID, rule.action.level)) {
 				_lastRecoverySkillSendTick = Renderer.tick;
+				const skid = parseInt(rule.action.SKID, 10);
+				if (!((_skillCastLen[skid] || 0) > 0)) {
+					armRecBeat(recBeatInterval(skid));
+				}
 				return true;
 			}
 			continue;
@@ -926,48 +1011,47 @@ function getLegacyRecoveryRules() {
 	];
 }
 
-function useSkillOnSelf(skillId, level) {
+function selfCastBlocked(SKID, lv) {
 	const player = getPlayer();
 	if (!player) {
-		return false;
+		return true;
 	}
-	const SKID = parseInt(skillId, 10);
-	let lv = parseInt(level, 10);
-	if (isNaN(SKID) || isNaN(lv)) {
-		return false;
-	}
-	lv = Math.max(1, Math.min(10, lv));
 	if (player.amotionTick && player.amotionTick > Renderer.tick) {
-		return false;
+		return true;
 	}
 	if (Session.moveAction) {
-		return false;
+		return true;
 	}
-	// Don't interrupt an ongoing cast: the server rejects overlapping casts,
-	// and the rejected send would poison the re-cast gate for 60s.
+	// Don't interrupt an ongoing cast: the server rejects overlapping casts.
 	// (amotionTick does NOT cover cast bars — those live on entity.cast.)
 	const cast = player.cast;
 	if (cast && cast.display && cast.delay > 0) {
 		const elapsed = Date.now() - cast.tick;
 		if (elapsed >= 0 && elapsed < cast.delay) {
-			return false;
+			return true;
 		}
 	}
 	// Post-cast grace: our own previous cast leaves server canact hot past
 	// its visible end. Settled per exit (live postdelay > static table >
 	// fallback); see exitCasting.
 	if (Renderer.tick - _lastOwnCastEndTick < _lastPostDelayMs) {
-		return false;
+		return true;
 	}
 	// SP affordability pre-check: never send a skill we can't afford.
-	// A server-rejected send would otherwise poison the re-cast gate
-	// (_buffLastCast) for 60s while the buff stays missing.
 	const info = SkillInfo[SKID];
 	if (info && Array.isArray(info.SpAmount) && info.SpAmount.length) {
 		const cost = info.SpAmount[Math.min(lv, info.SpAmount.length) - 1];
 		if (typeof cost === 'number' && player.life && typeof player.life.sp === 'number' && player.life.sp < cost) {
-			return false;
+			return true;
 		}
+	}
+	return false;
+}
+
+function sendSelfSkillPacket(SKID, lv) {
+	const player = getPlayer();
+	if (!player) {
+		return false;
 	}
 	let pkt;
 	if (PACKETVER.value >= 20180307) {
@@ -979,9 +1063,35 @@ function useSkillOnSelf(skillId, level) {
 	pkt.selectedLevel = lv;
 	pkt.targetID = player.GID;
 	Network.sendPacket(pkt);
+	return true;
+}
+
+function useSkillOnSelf(skillId, level, trackCasting) {
+	const player = getPlayer();
+	if (!player) {
+		return false;
+	}
+	const SKID = parseInt(skillId, 10);
+	let lv = parseInt(level, 10);
+	if (isNaN(SKID) || isNaN(lv)) {
+		return false;
+	}
+	lv = Math.max(1, Math.min(10, lv));
+	if (selfCastBlocked(SKID, lv)) {
+		return false;
+	}
+	if (!sendSelfSkillPacket(SKID, lv)) {
+		return false;
+	}
 	// Atomic with the send: track the cast in the satellite state so the
 	// blind window (before the server ack creates the cast bar) is covered.
-	enterCasting(_state, SKID);
+	// Instant sends skip it: a dud then costs exactly one dropped packet
+	// instead of an 800ms freeze, while a real bar is still picked up by
+	// the passive detector (which learns). Callers with their own pacing
+	// (recovery beat) pass trackCasting=false.
+	if (trackCasting !== false && ((_skillCastLen[SKID] || 0) > 0)) {
+		enterCasting(_state, SKID);
+	}
 	return true;
 }
 
@@ -2205,6 +2315,7 @@ function start() {
 	_lootLastSend = 0;
 	_skillLastFire = 0;
 	_skillBeatTimer = null;
+	_recBeatTimer = null;
 	_combatDisrupted = false;
 	_pendingCast = null;
 	_castLastInfo = '-';
@@ -2243,6 +2354,7 @@ function stop() {
 		Events.clearTimeout(_skillBeatTimer);
 		_skillBeatTimer = null;
 	}
+	disarmRecBeat();
 
 	_lastRoamTick = 0;
 	_retaliateGID = null;
@@ -2314,6 +2426,7 @@ function getStats() {
 		stateAgeMs: now - _stateTick,
 		stateGID: _stateGID,
 		skillBeat: _skillBeatTimer !== null,
+		recBeat: _recBeatTimer !== null,
 		cast: _castLastInfo,
 		postDelay: `${_lastPostDelayMs}ms(${_lastPostDelaySrc})`,
 		moveAction: !!Session.moveAction,
