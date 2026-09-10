@@ -1,0 +1,35 @@
+src/Preferences/AutoBattle.js
+  s_0082fed80a86b0::t_78477928385137 113
+  s_0082fed80a86b0::t_1bb66f919be7f8 4-17,22-26,28-58,60-63,65-112,114-245
+src/UI/Components/AutoBattle/AutoBattle.js
+  s_0082fed80a86b0::t_ac13dfd457063a 948
+  s_0082fed80a86b0::t_4e9c29410c34b1 848-860
+src/DB/Items/ItemTable.js
+  s_254918e6ba3c81::t_126685d52a0489 8411-8425
+src/Engine/CharEngine.js
+  s_0082fed80a86b0::t_5433a31fa14b1d 30,840-842
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "352b0ec96da803ffb7c7a3a77914e6f13c592902",
+  "prompts": {},
+  "sessions": {
+    "s_0082fed80a86b0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f7549d24cffeaG3r235Yigu5m6",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    },
+    "s_254918e6ba3c81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f75a0918affeTHf5eO8XaL9DBe",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
