@@ -1099,6 +1099,7 @@ function useItemByIndex(index) {
 	if (index === undefined || index === null) {
 		return;
 	}
+	_lastItemUseTick = Renderer.tick;
 	let pkt;
 	if (PACKETVER.value >= 20180307) {
 		pkt = new PACKET.CZ.USE_ITEM2();
@@ -1632,8 +1633,20 @@ function tryTeleportSlots() {
 	}
 	// Teleport items/skills require standing (e.g. escaping while sit-resting).
 	sendStandUp();
-	for (let i = 0; i < 2; i++) {
-		if (useTeleportAction(slots[i])) {
+	const now = Renderer.tick;
+	// If the previous escape attempt was recent and we are still in danger,
+	// it evidently did not take us away (silent server reject): start from
+	// the other slot so a doomed slot 0 can't starve slot 1 forever. After
+	// a real escape the next danger comes much later and slot 0 is preferred.
+	let order = [0, 1];
+	if (_lastTpSlot >= 0 && now - _lastTpSendTick < TP_ROTATE_WINDOW_MS) {
+		order = [1, 0];
+	}
+	for (let k = 0; k < 2; k++) {
+		const i = order[k];
+		if (useTeleportAction(slots[i], now)) {
+			_lastTpSendTick = now;
+			_lastTpSlot = i;
 			return true;
 		}
 	}
@@ -1657,7 +1670,17 @@ function tryTeleport(now) {
 	return tryTeleportSlots();
 }
 
-function useTeleportAction(action) {
+// Server shares one 100ms use-item lock across potions and wings: an item
+// sent inside it duds silently, so yield to the next slot for a while.
+const ITEM_USE_GAP_MS = 150;
+let _lastItemUseTick = 0;
+// Escape rotation: previous attempt slot + tick. A repeat danger shortly
+// after a send means the send didn't take us away.
+const TP_ROTATE_WINDOW_MS = 5000;
+let _lastTpSendTick = 0;
+let _lastTpSlot = -1;
+
+function useTeleportAction(action, now) {
 	if (!action) {
 		return false;
 	}
@@ -1673,7 +1696,13 @@ function useTeleportAction(action) {
 	if (ui && ui.getItemById) {
 		item = ui.getItemById(action.ITID);
 	}
-	if (!item) {
+	// Zero-count ghosts / stale indices must fall through to the next slot:
+	// getItemById ignores count, so a blind send here would read as success
+	// and starve slot 1 forever.
+	if (!item || !(item.count > 0) || typeof item.index !== 'number') {
+		return false;
+	}
+	if ((typeof now === 'number' ? now : Renderer.tick) - _lastItemUseTick < ITEM_USE_GAP_MS) {
 		return false;
 	}
 	useItemByIndex(item.index);
@@ -2324,6 +2353,9 @@ function start() {
 	_lastOwnCastEndTick = 0;
 	_lastPostDelayMs = 0;
 	_lastPostDelaySrc = '-';
+	_lastItemUseTick = 0;
+	_lastTpSendTick = 0;
+	_lastTpSlot = -1;
 	for (let i = 0; i < _buffDud.length; i++) {
 		_buffDud[i] = 0;
 		_buffGateJitter[i] = 0;
@@ -2439,6 +2471,7 @@ function getStats() {
 		recHold: recoverySkillDemandExists() && (isCastDisplayActive() || now - _lastRecoverySkillSendTick < BUFF_SETTLE_MS),
 		attackedCount: getMobAttackers(now).length,
 		surroundCount: countNearbyMobs(),
+		tp: _lastTpSlot >= 0 ? `slot${_lastTpSlot}@${now - _lastTpSendTick}ms` : '-',
 		retaliateGID: _retaliateGID,
 		sitting: isSitting(),
 		sitRecovery: `enabled=${sitCfg.enabled} sit=${sitCfg.sitTarget}<=${sitCfg.sitThreshold}% stand=${sitCfg.standTarget}>=${sitCfg.standThreshold}% hp=${Math.round(getHpPercent())}% sp=${Math.round(getSpPercent())}%`,
