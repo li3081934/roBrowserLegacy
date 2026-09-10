@@ -845,6 +845,19 @@ AutoBattle.init = function init() {
 	this._refreshSkillState = refreshSkillState;
 	this._syncUIFromPrefs = syncUIFromPrefs;
 
+	// When the active character profile is swapped (character login), refresh
+	// the panel if it is currently mounted. Normally the panel is removed on
+	// character switch already; this only covers abnormal paths.
+	Prefs.onProfileChange = () => {
+		try {
+			if (this._host && this._host.parentNode && this._syncUIFromPrefs) {
+				this._syncUIFromPrefs();
+			}
+		} catch (_e) {
+			// ignore
+		}
+	};
+
 	function syncUIFromPrefs() {
 		const r = root.querySelector('#ab_range');
 		if (r) r.value = Prefs.range;
@@ -932,7 +945,7 @@ AutoBattle.onAppend = function onAppend() {
 					skillSelect.appendChild(opt);
 				});
 			}
-		} catch (e) {
+		} catch (_e) {
 			// ignore
 		}
 		skillSelect.value = String(Prefs.skillId || 0);

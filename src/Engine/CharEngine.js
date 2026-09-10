@@ -27,6 +27,7 @@ import JoystickUI from 'UI/Components/JoystickUI/JoystickUI.js';
 import CharSelect from 'UI/Components/CharSelect/CharSelect.js';
 import CharCreate from 'UI/Components/CharCreate/CharCreate.js';
 import Player from 'Renderer/Entity/Player.js';
+import AutoBattlePrefs from 'Preferences/AutoBattle.js';
 
 // Load modules
 // Version Dependent UIs
@@ -836,6 +837,9 @@ function onReceiveMapInfo(pkt) {
 	DB.startedLazyInit = false;
 	retryCount = 0;
 	Session.GID = pkt.GID;
+	// Swap auto-battle config to this character's isolated profile before the
+	// map engine (and AutoBattleEngine.init) reads the preferences.
+	AutoBattlePrefs.loadForCharacter();
 	MapEngine.init(pkt.addr.ip, pkt.addr.port, pkt.mapName);
 }
 

@@ -8408,5 +8408,19 @@ export default {
 	25005: { ClassNum: 0 },
 	25006: { ClassNum: 0 },
 	25007: { ClassNum: 0 },
-	25008: { ClassNum: 0 }
+	25008: { ClassNum: 0 },
+	30001: {
+		unidentifiedDisplayName: 'Hit Count Ring',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['Get it from the Hit Count Dealer in Prontera.'],
+		identifiedDisplayName: 'Hit Count Ring',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: [
+			'Increases hit count by 5 for:',
+			'Fire Bolt, Cold Bolt, Lightning Bolt,',
+			'Fire Ball and Double Strafe.'
+		],
+		slotCount: 0,
+		ClassNum: 0
+	}
 };
