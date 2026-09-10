@@ -900,6 +900,7 @@ function tryUsePotion() {
 		}
 		if (rule.action.kind === 'skill') {
 			if (useSkillOnSelf(rule.action.SKID, rule.action.level)) {
+				_lastRecoverySkillSendTick = Renderer.tick;
 				return true;
 			}
 			continue;
@@ -1594,6 +1595,9 @@ const _buffDud = [0, 0, 0, 0, 0];
 // Last tick a buff *skill* was sent (Renderer.tick). Idle waits for the
 // send to land instead of engaging immediately.
 let _lastBuffSkillSendTick = 0;
+// Last tick a recovery *skill* (heal) was sent (Renderer.tick). Idle waits
+// for it to land instead of engaging immediately (mirror of buffs).
+let _lastRecoverySkillSendTick = 0;
 // Grace after a buff send during which idle holds engagement for it to land.
 const BUFF_SETTLE_MS = 2500;
 // Hold after any own cast ends before the next self-skill send: covers
@@ -1789,6 +1793,29 @@ function upkeep(now) {
 	tryKeepBuffs(now);
 }
 
+/**
+ * True while any recovery rule still needs a skill cast (same lenses as
+ * upkeep). Item rules are instant and never hold engagement.
+ * Used by idle to hold engagement until fresh heal sends land.
+ */
+function recoverySkillDemandExists() {
+	const hpP = getHpPercent();
+	const spP = getSpPercent();
+	const rules = Array.isArray(Prefs.recoveryRules) && Prefs.recoveryRules.length ? Prefs.recoveryRules : getLegacyRecoveryRules();
+	for (let i = 0; i < rules.length; i++) {
+		const rule = rules[i];
+		if (!rule || rule.enabled === false || !rule.action || rule.action.kind !== 'skill') {
+			continue;
+		}
+		const percent = rule.target === 'sp' ? spP : hpP;
+		const threshold = typeof rule.threshold === 'number' ? rule.threshold : 50;
+		if (percent < threshold) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function updateIdle(now) {
 	upkeep(now);
 	if (_state !== ST_IDLE) {
@@ -1802,6 +1829,15 @@ function updateIdle(now) {
 	// sends past the settle window) engages normally, so idle never stands
 	// still forever waiting.
 	if (buffDemandExists(now) && (isCastDisplayActive() || now - _lastBuffSkillSendTick < BUFF_SETTLE_MS)) {
+		return;
+	}
+
+	// Idle tops up recovery skills before engaging (mirror of buffs): when
+	// a heal is still missing and one was just sent, hold engagement a
+	// moment for HP to cross the threshold instead of chasing right away.
+	// Anything else (blocked sends, e.g. SP broke, past the settle window)
+	// engages normally, so idle never stands still forever waiting.
+	if (recoverySkillDemandExists() && (isCastDisplayActive() || now - _lastRecoverySkillSendTick < BUFF_SETTLE_MS)) {
 		return;
 	}
 
@@ -2173,6 +2209,7 @@ function start() {
 	_pendingCast = null;
 	_castLastInfo = '-';
 	_lastBuffSkillSendTick = 0;
+	_lastRecoverySkillSendTick = 0;
 	_lastOwnCastEndTick = 0;
 	_lastPostDelayMs = 0;
 	_lastPostDelaySrc = '-';
@@ -2286,6 +2323,7 @@ function getStats() {
 		hasTarget: hasTarget,
 		buffEnabled: !!Prefs.buffEnabled,
 		sp: player && player.life ? `${player.life.sp}/${player.life.sp_max}` : '-',
+		recHold: recoverySkillDemandExists() && (isCastDisplayActive() || now - _lastRecoverySkillSendTick < BUFF_SETTLE_MS),
 		attackedCount: getMobAttackers(now).length,
 		surroundCount: countNearbyMobs(),
 		retaliateGID: _retaliateGID,
