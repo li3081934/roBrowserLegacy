@@ -1,0 +1,80 @@
+src/UI/Components/Glyph/Glyph.html
+  s_254918e6ba3c81::t_62ef4266a63a49 1,3-10,13,21-30,32-34
+  s_254918e6ba3c81::t_80b2eeb91304be 2,11-12,14-20,31,35-37
+src/UI/Components/Glyph/Glyph.js
+  s_254918e6ba3c81::t_dee126b2342d86 1-5,10-20,23-38,48-51,57-70,78-83,98,100,115,121-123,125,133-134,137,149,152-161,163,168-170,203-205,213-215,242-244,248-253,261-271,276-289,311
+  s_254918e6ba3c81::t_e8db10b0bc0fc5 174-176
+  s_254918e6ba3c81::t_7c777861b7cd1f 147
+  s_254918e6ba3c81::t_d2c4aaea81dbd0 245-247,254-260
+  s_254918e6ba3c81::t_3316d3f72bcf1f 138,141-144
+  s_254918e6ba3c81::t_38beec62d96792 275
+  s_254918e6ba3c81::t_68b9e42d1de59a 198-201
+  s_254918e6ba3c81::t_5906ab1ecef6d9 290-310
+  s_254918e6ba3c81::t_3fb13c1708b686 6-9,21,39-47,52-56,71-77,84-97,99,101-114,116-120,124,126-132,135-136,139-140,145-146,148,150-151,162,164-167,171-173,177-197,202,206-212,216-241
+  s_254918e6ba3c81::t_92efefb68c39cd 22
+  s_254918e6ba3c81::t_ded9704a8491cd 272-274
+src/UI/Components/BasicInfo/BasicInfoCommon.js
+  s_254918e6ba3c81::t_eebed102444431 117,119
+  s_254918e6ba3c81::t_1018e12c775fa8 118
+  s_254918e6ba3c81::t_9aea2015312666 27
+src/DB/Items/EquipmentLocation.js
+  s_254918e6ba3c81::t_b544aa86d697ae 33-41
+src/Engine/MapEngine/Item.js
+  s_254918e6ba3c81::t_8a9e6d838adf54 187
+  s_254918e6ba3c81::t_cab5e5532c7450 623
+  s_254918e6ba3c81::t_5d04ade795f397 110
+  s_254918e6ba3c81::t_bf3b0f0f2c17bf 600
+  s_254918e6ba3c81::t_940fda084029a5 122
+  s_254918e6ba3c81::t_79a30251b83565 101
+  s_7dac705f52f30f::t_ad95407b199a45 26
+src/UI/Components/SwitchEquip/SwitchEquip.js
+  s_254918e6ba3c81::t_e630ce5eb09e9f 349-358
+  s_254918e6ba3c81::t_150dc6a55ff10c 217
+  s_254918e6ba3c81::t_f459fba1d6349b 249
+src/DB/Items/ItemTable.js
+  s_254918e6ba3c81::t_11d98d53b932a9 8424-8428,8430,8433-8434,8440-8442
+  s_254918e6ba3c81::t_8611bfa374146f 8522-8551
+  s_254918e6ba3c81::t_3a46e0411989af 8692-8704
+  s_254918e6ba3c81::t_b4ac5562e0203f 8443-8514,8517-8521
+  s_254918e6ba3c81::t_ed920ecde615d5 8515-8516
+  s_254918e6ba3c81::t_99fb42a90139c9 8552-8691
+  s_254918e6ba3c81::t_fbfa1cee2ae5de 8413,8415-8416,8419-8423,8429,8431-8432,8435-8439
+src/UI/Components/BasicInfo/BasicInfoV5/BasicInfoV5.html
+  s_254918e6ba3c81::t_99062c6b567efa 126-133
+src/Engine/MapEngine.js
+  s_254918e6ba3c81::t_544d3baf371c66 47
+  s_254918e6ba3c81::t_13969169bd9d65 1294-1302
+src/UI/Components/Equipment/EquipmentCommon.js
+  s_254918e6ba3c81::t_39609d3b5af919 609
+  s_254918e6ba3c81::t_1e085ee4cf8c1f 556
+  s_254918e6ba3c81::t_a382ef974e5482 83-92
+src/UI/Components/BasicInfo/BasicInfoV4/BasicInfoV4.html
+  s_254918e6ba3c81::t_879c709acbf2c8 108-115
+src/UI/Components/Glyph/Glyph.css
+  s_254918e6ba3c81::t_7369087aec1dad 2,21-23,48-50,52-56,58-64,66,72-73,79-80,94,102-104,106,108,110,115-116,128-129,183-184,187
+  s_254918e6ba3c81::t_51d70ed6f0b738 1,3-20,24-47,51,57,65,67-71,74-78,81-93,95-101,105,107,109,111-114,117-127,130-182,185-186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "11eb767db6d07c9a4b58fd4d1e6986ebd04739c9",
+  "prompts": {},
+  "sessions": {
+    "s_254918e6ba3c81": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_f75a0918affeTHf5eO8XaL9DBe",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    },
+    "s_7dac705f52f30f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_fc2c05bf4ffeSHY1qCTOKhZunG",
+        "model": "unknown"
+      },
+      "human_author": "lijs8 <lijs8@lenovo.com>"
+    }
+  }
+}
