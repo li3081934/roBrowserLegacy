@@ -8410,15 +8410,298 @@ export default {
 	25007: { ClassNum: 0 },
 	25008: { ClassNum: 0 },
 	30001: {
-		unidentifiedDisplayName: 'Hit Count Ring',
+		unidentifiedDisplayName: '大雕文·多重咏唱',
 		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
-		unidentifiedDescriptionName: ['Get it from the Hit Count Dealer in Prontera.'],
-		identifiedDisplayName: 'Hit Count Ring',
+		unidentifiedDescriptionName: ['大雕文（Major Glyph）', '最多同时装备 3 个。'],
+		identifiedDisplayName: '大雕文·多重咏唱',
 		identifiedResourceName: '\xbb\xe7\xb0\xfa',
 		identifiedDescriptionName: [
-			'Increases hit count by 5 for:',
-			'Fire Bolt, Cold Bolt, Lightning Bolt,',
-			'Fire Ball and Double Strafe.'
+			'大雕文（Major Glyph）',
+			'火箭术、冰箭术、雷击术、火球术、',
+			'二连矢 的段数 +5。',
+			'',
+			'最多同时装备 3 个大雕文。'
+		],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30002: {
+		unidentifiedDisplayName: '小雕文·回响火矢',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）', '最多同时装备 5 个。'],
+		identifiedDisplayName: '小雕文·回响火矢',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: [
+			'小雕文（Minor Glyph）',
+			'每第 3 次普通攻击',
+			'追加释放 10 级火箭术。',
+			'',
+			'最多同时装备 5 个小雕文。'
+		],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30003: {
+		unidentifiedDisplayName: '小雕文·灵巧',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·灵巧',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'DEX 增加 10%（基于基础 DEX）。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30004: {
+		unidentifiedDisplayName: '小雕文·疾风',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·疾风',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', '攻击速度（ASPD）+2。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30005: {
+		unidentifiedDisplayName: '小雕文·迅捷',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·迅捷',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'AGI 增加 10%（基于基础 AGI）。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30006: {
+		unidentifiedDisplayName: '小雕文·汲血',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·汲血',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: [
+			'小雕文（Minor Glyph）',
+			'攻击时有 5% 概率',
+			'按造成伤害的 5% 回复 HP。',
+			'',
+			'最多同时装备 5 个小雕文。'
+		],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30007: {
+		unidentifiedDisplayName: '小雕文·汲魂',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·汲魂',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: [
+			'小雕文（Minor Glyph）',
+			'攻击时有 5% 概率',
+			'按造成伤害的 5% 回复 SP。',
+			'',
+			'最多同时装备 5 个小雕文。'
+		],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30008: {
+		unidentifiedDisplayName: '大雕文·连珠',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['大雕文（Major Glyph）'],
+		identifiedDisplayName: '大雕文·连珠',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: [
+			'大雕文（Major Glyph）',
+			'每第 3 次普通攻击',
+			'追加释放二连射。',
+			'（1 级；若已学会更高等级则用习得等级）',
+			'',
+			'最多同时装备 3 个大雕文。'
+		],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30009: {
+		unidentifiedDisplayName: '大雕文·双星',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['大雕文（Major Glyph）'],
+		identifiedDisplayName: '大雕文·双星',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: [
+			'大雕文（Major Glyph）',
+			'二连射 段数 +1。',
+			'',
+			'最多同时装备 3 个大雕文。'
+		],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30010: {
+		unidentifiedDisplayName: '大雕文·破云',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['大雕文（Major Glyph）'],
+		identifiedDisplayName: '大雕文·破云',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: [
+			'大雕文（Major Glyph）',
+			'二连射 伤害 +50%。',
+			'',
+			'最多同时装备 3 个大雕文。'
+		],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30011: {
+		unidentifiedDisplayName: '小雕文·力量',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·力量',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'STR +10。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30012: {
+		unidentifiedDisplayName: '小雕文·敏捷',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·敏捷',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'AGI +10。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30013: {
+		unidentifiedDisplayName: '小雕文·体力',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·体力',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'VIT +10。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30014: {
+		unidentifiedDisplayName: '小雕文·智力',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·智力',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'INT +10。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30015: {
+		unidentifiedDisplayName: '小雕文·精准',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·精准',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'DEX +10。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30016: {
+		unidentifiedDisplayName: '小雕文·幸运',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·幸运',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'LUK +10。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30017: {
+		unidentifiedDisplayName: '小雕文·生命',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·生命',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', '最大 HP +500。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30018: {
+		unidentifiedDisplayName: '小雕文·魔力',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·魔力',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', '最大 SP +100。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30019: {
+		unidentifiedDisplayName: '小雕文·生命增幅',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·生命增幅',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', '最大 HP +10%。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30020: {
+		unidentifiedDisplayName: '小雕文·魔力增幅',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·魔力增幅',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', '最大 SP +10%。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30021: {
+		unidentifiedDisplayName: '小雕文·攻击',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·攻击',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'ATK +20。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30022: {
+		unidentifiedDisplayName: '小雕文·魔攻',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·魔攻',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'MATK +20。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30023: {
+		unidentifiedDisplayName: '小雕文·攻击增幅',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·攻击增幅',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'ATK +5%。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30024: {
+		unidentifiedDisplayName: '小雕文·魔攻增幅',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['小雕文（Minor Glyph）'],
+		identifiedDisplayName: '小雕文·魔攻增幅',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: ['小雕文（Minor Glyph）', 'MATK +5%。', '', '最多同时装备 5 个小雕文。'],
+		slotCount: 0,
+		ClassNum: 0
+	},
+	30025: {
+		unidentifiedDisplayName: '大雕文·风雪连矢',
+		unidentifiedResourceName: '\xbb\xe7\xb0\xfa',
+		unidentifiedDescriptionName: ['大雕文（Major Glyph）'],
+		identifiedDisplayName: '大雕文·风雪连矢',
+		identifiedResourceName: '\xbb\xe7\xb0\xfa',
+		identifiedDescriptionName: [
+			'大雕文（Major Glyph）',
+			'施放二连射时，100% 在目标脚下释放暴风雪。',
+			'（等级按玩家习得的暴风雪等级，未学则为 1 级）',
+			'',
+			'最多同时装备 3 个大雕文。'
 		],
 		slotCount: 0,
 		ClassNum: 0

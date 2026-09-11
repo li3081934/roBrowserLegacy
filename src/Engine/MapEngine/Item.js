@@ -23,6 +23,7 @@ import ItemSelection from 'UI/Components/ItemSelection/ItemSelection.js';
 import Inventory from 'UI/Components/Inventory/Inventory.js';
 import CartItems from 'UI/Components/CartItems/CartItems.js';
 import Equipment from 'UI/Components/Equipment/Equipment.js';
+import Glyph from 'UI/Components/Glyph/Glyph.js';
 import PlayerViewEquip from 'UI/Components/PlayerViewEquip/PlayerViewEquip.js';
 import SwitchEquip from 'UI/Components/SwitchEquip/SwitchEquip.js';
 import Storage from 'UI/Components/Storage/Storage.js';
@@ -97,15 +98,16 @@ function onItemPickAnswer(pkt) {
  * @param {object} pkt - PACKET.ZC.EQUIPMENT_ITEMLIST
  */
 function onInventorySetList(pkt) {
+	Glyph.setList(pkt.itemInfo || pkt.ItemInfo);
 	Inventory.getUI().setItems(pkt.itemInfo || pkt.ItemInfo);
 }
-
 /**
  * Remove item from inventory
  *
  * @param {object} pkt - PACKET.ZC.ITEM_THROW_ACK
  */
 function onIventoryRemoveItem(pkt) {
+	Glyph.unEquip(pkt.Index);
 	Inventory.getUI().removeItem(pkt.Index, pkt.count || pkt.Count || 0);
 }
 
@@ -117,6 +119,7 @@ function onIventoryRemoveItem(pkt) {
 function onEquipementTakeOff(pkt) {
 	if (pkt.result) {
 		const item = Equipment.getUI().unEquip(pkt.index, pkt.wearLocation);
+		Glyph.unEquip(pkt.index);
 
 		if (item) {
 			item.WearState = 0;
@@ -181,6 +184,7 @@ function onEquipementTakeOff(pkt) {
 function onItemEquip(pkt) {
 	if (pkt.result == 1) {
 		const item = Inventory.getUI().removeItem(pkt.index, 1);
+		Glyph.equip(item, pkt.wearLocation);
 		Equipment.getUI().equip(item, pkt.wearLocation);
 		ChatBox.addText(DB.getItemName(item) + ' ' + DB.getMessage(170), ChatBox.TYPE.BLUE, ChatBox.FILTER.ITEM);
 
@@ -593,6 +597,7 @@ function onRecoverPenaltyOverweight(pkt) {
 function onItemListNormal(pkt) {
 	switch (pkt.invType) {
 		case 0:
+			Glyph.setList(pkt.itemInfo || pkt.ItemInfo);
 			Inventory.getUI().setItems(pkt.itemInfo || pkt.ItemInfo);
 			break;
 		case 1:
@@ -615,6 +620,7 @@ function onItemListNormal(pkt) {
 function onItemListEquip(pkt) {
 	switch (pkt.invType) {
 		case 0:
+			Glyph.setList(pkt.itemInfo || pkt.ItemInfo);
 			Inventory.getUI().setItems(pkt.itemInfo || pkt.ItemInfo);
 			break;
 		case 1:

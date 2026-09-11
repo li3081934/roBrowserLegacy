@@ -214,7 +214,7 @@ SwitchEquip.equip = function equip(item, location, inSwitchList) {
 
 	const root = SwitchEquip.getRoot();
 	const selector = getSelectorFromLocation(location);
-	const el = root.querySelector(selector);
+	const el = selector ? root.querySelector(selector) : null;
 	if (el) {
 		el.innerHTML =
 			`<div class="item" data-index="${item.index}">` +
@@ -246,7 +246,7 @@ SwitchEquip.unEquip = function unEquip(index, location) {
 	const item = SwitchEquip._list[index];
 	item.equipped = 0;
 
-	const el = root.querySelector(selector);
+	const el = selector ? root.querySelector(selector) : null;
 	if (el) el.innerHTML = '';
 	delete SwitchEquip._list[index];
 };
@@ -345,6 +345,16 @@ function getSelectorFromLocation(location) {
 	if (location & EquipLocation.SHADOW_SHOES) selector.push('.swap_shadow_shoes');
 	if (location & EquipLocation.SHADOW_R_ACCESSORY_SHADOW) selector.push('.swap_shadow_accessory1');
 	if (location & EquipLocation.SHADOW_L_ACCESSORY_SHADOW) selector.push('.swap_shadow_accessory2');
+
+	// Glyphs have no swap slot here (rendered by the dedicated Glyph window).
+	if (location & EquipLocation.GLYPH_MAJOR_1) selector.push('.swap_glyph_major1');
+	if (location & EquipLocation.GLYPH_MAJOR_2) selector.push('.swap_glyph_major2');
+	if (location & EquipLocation.GLYPH_MAJOR_3) selector.push('.swap_glyph_major3');
+	if (location & EquipLocation.GLYPH_MINOR_1) selector.push('.swap_glyph_minor1');
+	if (location & EquipLocation.GLYPH_MINOR_2) selector.push('.swap_glyph_minor2');
+	if (location & EquipLocation.GLYPH_MINOR_3) selector.push('.swap_glyph_minor3');
+	if (location & EquipLocation.GLYPH_MINOR_4) selector.push('.swap_glyph_minor4');
+	if (location & EquipLocation.GLYPH_MINOR_5) selector.push('.swap_glyph_minor5');
 
 	return selector.join(', ');
 }

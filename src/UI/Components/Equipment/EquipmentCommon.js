@@ -80,6 +80,16 @@ function getSelectorFromLocation(location) {
 	if (location & EquipLocation.SHADOW_SHOES) selector.push('.shadow_shoes');
 	if (location & EquipLocation.SHADOW_R_ACCESSORY_SHADOW) selector.push('.shadow_accessory1');
 	if (location & EquipLocation.SHADOW_L_ACCESSORY_SHADOW) selector.push('.shadow_accessory2');
+	// Glyphs are rendered by the dedicated Glyph window; these selectors don't exist
+	// here so the equipment window safely ignores them (no empty-selector exception).
+	if (location & EquipLocation.GLYPH_MAJOR_1) selector.push('.glyph_major1');
+	if (location & EquipLocation.GLYPH_MAJOR_2) selector.push('.glyph_major2');
+	if (location & EquipLocation.GLYPH_MAJOR_3) selector.push('.glyph_major3');
+	if (location & EquipLocation.GLYPH_MINOR_1) selector.push('.glyph_minor1');
+	if (location & EquipLocation.GLYPH_MINOR_2) selector.push('.glyph_minor2');
+	if (location & EquipLocation.GLYPH_MINOR_3) selector.push('.glyph_minor3');
+	if (location & EquipLocation.GLYPH_MINOR_4) selector.push('.glyph_minor4');
+	if (location & EquipLocation.GLYPH_MINOR_5) selector.push('.glyph_minor5');
 	return selector.join(', ');
 }
 
@@ -543,7 +553,7 @@ export function createEquipment({
 		const root = Component.getRoot();
 		const selector = getSelectorFromLocation(location);
 		const gradeInner = enchantGrade ? '<div class="grade"></div>' : '';
-		root.querySelectorAll(selector).forEach(cell => {
+		(selector ? root.querySelectorAll(selector) : []).forEach(cell => {
 			cell.innerHTML =
 				'<div class="item" data-index="' +
 				item.index +
@@ -596,11 +606,10 @@ export function createEquipment({
 			item.equipped = 0;
 		}
 
-		root.querySelectorAll(selector).forEach(el => {
+		(selector ? root.querySelectorAll(selector) : []).forEach(el => {
 			el.innerHTML = '';
 		});
 		delete _list[index];
-
 		return item;
 	};
 

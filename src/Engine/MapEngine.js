@@ -44,6 +44,7 @@ import ChangeCart from 'UI/Components/ChangeCart/ChangeCart.js';
 import CartDecoration from 'UI/Components/CartDecoration/CartDecoration.js';
 import ShortCut from 'UI/Components/ShortCut/ShortCut.js';
 import Equipment from 'UI/Components/Equipment/Equipment.js';
+import Glyph from 'UI/Components/Glyph/Glyph.js';
 import SwitchEquip from 'UI/Components/SwitchEquip/SwitchEquip.js';
 import ShortCuts from 'UI/Components/ShortCuts/ShortCuts.js';
 import StatusIcons from 'UI/Components/StatusIcons/StatusIcons.js';
@@ -1290,6 +1291,15 @@ function onUseItem(index) {
  * @param {number} where to equip
  */
 function onEquipItem(index, location) {
+	// Client-side: a glyph with the same item id cannot be equipped twice.
+	if (Glyph.isGlyphLocation(location)) {
+		const item = Inventory.getUI().getItemByIndex(index);
+		if (item && Glyph.isEquipped(item.ITID)) {
+			ChatBox.addText(DB.getMessage(372), ChatBox.TYPE.ERROR, ChatBox.FILTER.ITEM);
+			return;
+		}
+	}
+
 	const pkt = new PACKET.CZ.REQ_WEAR_EQUIP();
 	pkt.index = index;
 	pkt.wearLocation = location;

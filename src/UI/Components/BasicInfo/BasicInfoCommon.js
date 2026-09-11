@@ -24,6 +24,7 @@ import UIManager from 'UI/UIManager.js';
 import GUIComponent from 'UI/GUIComponent.js';
 import Inventory from 'UI/Components/Inventory/Inventory.js';
 import Equipment from 'UI/Components/Equipment/Equipment.js';
+import Glyph from 'UI/Components/Glyph/Glyph.js';
 import PartyFriends from 'UI/Components/PartyFriends/PartyFriends.js';
 import Guild from 'UI/Components/Guild/Guild.js';
 import Bank from 'UI/Components/Bank/Bank.js';
@@ -112,6 +113,9 @@ export function createBasicInfo(config) {
 				break;
 			case 'equip':
 				Equipment.getUI().toggle();
+				break;
+			case 'glyph':
+				Glyph.toggle();
 				break;
 			case 'skill':
 				SkillList.getUI().toggle();
